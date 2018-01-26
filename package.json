@@ -14,6 +14,8 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "bcrypt": "^1.0.3",
+    "mongoose": "^5.0.1",
     "socket.io": "^2.0.4",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1",
@@ -82,5 +84,9 @@
     "node": ">= 6.0.0",
     "npm": ">= 3.0.0"
   },
-  "browserslist": ["> 1%", "last 2 versions", "not ie <= 8"]
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not ie <= 8"
+  ]
 }
