@@ -1,6 +1,6 @@
 <template>
   <v-container fill-height fluid v-if="this.$store.state.user.id === null">
-    <v-card style="max-width: 500px; margin: auto;">
+    <v-card style="margin: auto; width: 700px">
       <v-layout>
         <v-flex class="pt-3 text-xs-center" xs12>
           <h2 class="headline">Register Your Account</h2>
@@ -8,6 +8,7 @@
       </v-layout>
       <v-form class="pl-2 pr-2" v-model="valid" ref="form" lazy-validation>
         <v-container grid-list-xl fluid>
+          <!-- First Name -->
           <v-layout wrap>
             <v-flex xs12 sm6>
               <v-text-field
@@ -17,6 +18,8 @@
                 required
               ></v-text-field>
             </v-flex>
+            <!-- Last Name -->
+
             <v-flex xs12 sm6>
               <v-text-field
                 label="Last Name"
@@ -26,15 +29,32 @@
               ></v-text-field>
             </v-flex>
           </v-layout>
+          <!-- Username -->
           <v-layout>
-            <v-flex xs12 sm6>
+            <v-flex xs6>
               <v-text-field
                 label="Username"
                 v-model="username"
                 :rules="[v => !!v || ' Username is required.']"
                 required
+                v-on:blur="checkIfUserExists()"
+                :error="usernameTaken()"
               ></v-text-field>
             </v-flex>
+            <!-- Username errors  -->
+            <v-flex xs6 v-if="usernameTaken()">
+                <v-layout class="text-xs-center" align-center>
+                    <v-icon class="pa-1" color="red">error</v-icon>
+                    Sorry, that username is taken.
+                </v-layout>
+            </v-flex>
+            <v-flex xs6 v-else-if="username.trim() !== '' && !usernameTaken()">
+              <v-layout class="text-xs-center" align-center>
+                  <v-icon class="pa-1" color="green">check_circle</v-icon>
+                  That username is available!
+              </v-layout>
+            </v-flex>
+
           </v-layout>
           <v-layout>
             <v-flex xs6>
@@ -62,7 +82,7 @@
             <v-spacer></v-spacer>
             <v-btn
               class="white--text"
-              color="blue"
+              color="green"
               @click="submit"
               :disabled="!valid"
             >
@@ -78,7 +98,7 @@
     <v-card style="max-width: 500px; margin: auto;">
       <v-layout>
         <v-flex xs12 class="text-xs-center">
-          <h2 >Account Registration</h2>
+          <h2>Account Registration</h2>
         </v-flex>
       </v-layout>
       <v-layout>
@@ -98,7 +118,7 @@ export default {
     valid: true,
     firstName: 'Steven',
     lastName: 'Myers',
-    username: 'larkenx',
+    username: 'larkenx ',
     password: 'ilikecandysomuch',
     confirmPassword: 'ilikecandysomuch'
   }),
@@ -111,9 +131,9 @@ export default {
         console.log('Submitting form...')
         this.$store.state.socket.emit('hello', 1)
         this.$store.state.socket.emit('register', {
-          firstName: this.firstName,
-          lastName: this.lastName,
-          username: this.username,
+          firstName: this.firstName.trim(),
+          lastName: this.lastName.trim(),
+          username: this.username.trim(),
           password: this.password
         })
       } else {
@@ -121,16 +141,25 @@ export default {
       }
     },
     clear() {
-      this.$refs.form.reset()
+      this.firstName = ''
+      this.lastName = ''
+      this.username = ''
+      this.password = ''
+      this.confirmPassword = ''
+    },
+    usernameTaken() {
+      return (
+        this.$store.state.errors.registrationError !== null &&
+        this.$store.state.errors.registrationError.toLowerCase().includes('username')
+      )
+    },
+    checkIfUserExists() {
+      this.$store.state.socket.emit('checkIfUserExists', this.username.trim())
     }
   }
 }
 </script>
 
 <style>
-.center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+
 </style>

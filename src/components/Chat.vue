@@ -14,7 +14,7 @@
           :align-content-start="message.sender === 'you'"
           :align-content-end="message.sender !== 'you'"
         >
-            <v-flex xs3 :offset-xs9="message.sender === 'you'">
+            <v-flex xs4 :offset-xs8="message.sender === 'you'">
               <v-card class="message" :color="message.sender !== 'you' ? 'white' : 'blue' ">
                 <v-card-text :class="message.sender !== 'you' ? 'black--text' : 'white--text' ">
                   {{message.text}}
@@ -25,10 +25,10 @@
     </v-container>
     <!-- <v-divider></v-divider> -->
     <v-layout row align-center>
-      <v-flex class="pa-2" xs11>
+      <v-flex class="pa-2" xs10>
         <v-text-field label="Type a message..."></v-text-field>
       </v-flex>
-      <v-flex xs1>
+      <v-flex xs2>
         <v-btn color="blue" flat>send &nbsp; <v-icon>send</v-icon></v-btn>
       </v-flex>
     </v-layout>
