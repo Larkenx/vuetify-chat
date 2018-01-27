@@ -9,16 +9,18 @@ const userSchema = new Schema(
     password: String,
     firstName: String,
     lastName: String,
-    conversations: [],
-    sockets: []
+    conversations: [String],
+    sockets: [String]
   },
   { collection: 'User' }
 )
 
-UserSchema.pre('save', next => {
-  let user = this
+userSchema.pre('save', function(next) {
+  var user = this
+  console.log(user)
   bcrypt.hash(user.password, 10, (err, hash) => {
     if (err) {
+      console.log('Error during bcrypt hashing - ', err)
       return next(err)
     }
     user.password = hash
@@ -26,6 +28,4 @@ UserSchema.pre('save', next => {
   })
 })
 
-let User = mongoose.model('User', userSchema)
-
-module.exports = User
+module.exports = mongoose.model('User', userSchema)

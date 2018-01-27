@@ -36,9 +36,16 @@
       <v-toolbar app fixed :clipped-left="true">
           <v-toolbar-title>Vue Chat</v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-toolbar-items>
+          <v-toolbar-items v-if="this.$store.state.user.id === null">
             <v-btn flat color="green" exact to="/register">Register</v-btn>
             <v-btn flat color="blue">Sign In</v-btn>
+          </v-toolbar-items>
+          <v-toolbar-items class="text-xs-center-justify" v-else>
+            <v-btn flat>{{getFullName()}}</v-btn>
+            <!-- <v-btn flat>
+                  <v-icon large>account_circle</v-icon>
+            </v-btn> -->
+            <v-btn flat color="red">Logout</v-btn>
           </v-toolbar-items>
       </v-toolbar>
       <v-content>
@@ -59,18 +66,14 @@ export default {
   data() {
     return {
       drawer: true,
-      items: [
-        {
-          title: 'Home',
-          icon: 'dashboard'
-        },
-        {
-          title: 'About',
-          icon: 'question_answer'
-        }
-      ],
       mini: true,
       right: null
+    }
+  },
+  methods: {
+    getFullName() {
+      let { firstName, lastName } = this.$store.state.user
+      return firstName + ' ' + lastName
     }
   },
   name: 'App'

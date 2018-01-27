@@ -7,13 +7,14 @@ const socketServer = require('socket.io')
 const bcrypt = require('bcrypt')
 const config = require('../dbconfig') // private dbconfig with MongoDB config
 const app = express()
+const userSchema = require('./models/user')
 
 /* Connecting to mongoose */
 let { user, password } = config.credentials
 let { host, port, dbName } = config.database
 mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`)
 
-var db = mongoose.connection
+let db = mongoose.connection
 db.on('error', err => {
   console.log('Failed to connect to the MongoDB database.', err)
 })
@@ -23,8 +24,8 @@ db.once('open', () => {
 })
 
 /* serving the express & socket server */
-var serve = http.createServer(app)
-var io = socketServer(serve)
+let serve = http.createServer(app)
+let io = socketServer(serve)
 serve.listen(3000, () => {
   console.log('Socket Server running at http://localhost:3000')
 })
@@ -43,7 +44,7 @@ io.on('connection', socket => {
     io.emit('loginSuccessful', mockUserData)
   }
 
-  mockLogin()
+  // mockLogin()
 
   /* Mongoose Helper Functions */
   const authenticate = params => {
@@ -82,10 +83,20 @@ io.on('connection', socket => {
   }
 
   const register = params => {
+    console.log('Creating new user with params: ', { ...params, conversations: [], sockets: [socket.id] })
     let user = new userSchema({ ...params, conversations: [], sockets: [socket.id] })
+
+    // username: String,
+    // password: String,
+    // firstName: String,
+    // lastName: String,
+    // conversations: [String],
+    // sockets: [String]
+
     user.save((err, result) => {
       if (err) {
         console.log('Error - failed to register user with params : ', params)
+        // console.log(err)
         io.to(socket.id).emit('registrationError', err)
       } else {
         console.log('Successfully registered new user : ', result.username)
@@ -103,11 +114,17 @@ io.on('connection', socket => {
   /* Socket Server Event Listeners */
 
   // accepts {username: String, password: String} so that we can check if they're the right users
-  io.on('login', params => {
+  socket.on('login', params => {
+    console.log('Received login request', params)
     authenticate(params)
   })
   // accepts {username: String, password: String, firstName: String, lastName: String} to create a new user
-  io.on('register', params => {
+  socket.on('register', params => {
+    console.log('Registering new user', params)
     register(params)
+  })
+
+  socket.on('hello', params => {
+    console.log('Client says hello!')
   })
 })
