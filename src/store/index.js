@@ -66,6 +66,7 @@ let store = new Vuex.Store({
     },
     [types.loadNewConversation](state, conversation) {
       state.conversations.push(conversation)
+      state.user.conversations.push(conversation._id)
     },
     [types.clearError](state, type) {
       if (type === 'registration') {

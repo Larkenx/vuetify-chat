@@ -1,6 +1,7 @@
 <template>
   <v-app>
       <v-navigation-drawer permanent app fixed clipped :mini-variant.sync="mini" v-model="drawer">
+        <!-- News Feed -->
         <v-toolbar flat class="transparent">
             <v-list class="pa-0">
               <v-list-tile avatar>
@@ -19,6 +20,7 @@
             </v-list>
         </v-toolbar>
         <v-divider></v-divider>
+        <!-- Chat Rooms  -->
         <v-toolbar flat class="transparent">
             <v-list class="pa-0">
               <v-list-tile avatar>
@@ -32,6 +34,21 @@
             </v-list>
         </v-toolbar>
         <v-divider></v-divider>
+        <!-- Online people  -->
+        <v-toolbar flat class="transparent">
+            <v-list class="pa-0">
+              <v-list-tile avatar>
+                  <v-list-tile-avatar>
+                        <v-icon>people</v-icon>
+                  </v-list-tile-avatar>
+                  <v-list-tile-content>
+                    <v-list-tile-title>Online Users</v-list-tile-title>
+                  </v-list-tile-content>
+                </v-list-tile>
+            </v-list>
+        </v-toolbar>
+        <v-divider></v-divider>
+        <!-- Contact List & Recent Conversations  -->
           <v-toolbar flat class="transparent">
               <v-list class="pa-0">
                   <v-list-tile avatar>
@@ -46,6 +63,7 @@
           </v-toolbar>
           <contact-list></contact-list>
       </v-navigation-drawer>
+      <!--  Top Toolbar -->
       <v-toolbar app fixed :clipped-left="true">
           <v-toolbar-title>Vue Chat</v-toolbar-title>
           <v-spacer></v-spacer>
@@ -61,11 +79,12 @@
             <v-btn flat color="red" @click="logout()">Logout</v-btn>
           </v-toolbar-items>
       </v-toolbar>
+      <!-- Main Content  -->
       <v-content>
           <router-view/>
       </v-content>
       <v-footer app>
-          <span>&copy; 2017</span>
+          <span>&copy; 2018 Steven Myers</span>
       </v-footer>
   </v-app>
 </template>

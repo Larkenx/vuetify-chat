@@ -218,6 +218,10 @@ io.on('connection', socket => {
                       let sockets = u1.sockets.concat(u2.sockets).filter(id => {
                         return connections.includes(id)
                       })
+
+                      sockets.forEach(s => {
+                        io.to(s).emit('loadNewConversation', result)
+                      })
                     }
                   })
                 }
