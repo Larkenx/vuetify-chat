@@ -8,11 +8,16 @@ const bcrypt = require('bcrypt')
 const config = require('../dbconfig') // private dbconfig with MongoDB config
 const app = express()
 const userSchema = require('./models/user')
+const conversationSchema = require('./models/conversation')
 
 /* Connecting to mongoose */
 let { user, password } = config.credentials
 let { host, port, dbName } = config.database
-mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`)
+let options = {
+  keepAlive: 300000,
+  connectTimeoutMS: 30000
+}
+mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`, options)
 
 let db = mongoose.connection
 db.on('error', err => {
@@ -29,10 +34,17 @@ let io = socketServer(serve)
 serve.listen(3000, () => {
   console.log('Socket Server running at http://localhost:3000')
 })
-
+let connections = []
 io.on('connection', socket => {
   console.log(`Socket ID ${socket.id} has connected.`)
-
+  connections.push(socket.id)
+  socket.on('disconnect', () => {
+    console.log(`Socket ID ${socket.id} has disconnected.`)
+    let i = connections.indexOf(socket.id)
+    if (i > -1) {
+      connections.splice(i, 1)
+    }
+  })
   const mockLogin = () => {
     const mockUserData = {
       _id: 1,
@@ -43,55 +55,56 @@ io.on('connection', socket => {
     }
     io.emit('loginSuccessful', mockUserData)
   }
-
-  // mockLogin()
-
   /* Mongoose Helper Functions */
-  const authenticate = params => {
+  const login = params => {
     let { username, password } = params
     userSchema
       .findOne({ username }, (err, dbUser) => {
         if (err || dbUser === null) {
           console.log('Error - unable to find user with userid: ', username)
-          io.to(socket.id).emit('loginError', err)
+          io.to(socket.id).emit('loginError', 'Your password or username is incorrect.')
         }
       })
       .then(dbUser => {
+        if (dbUser === undefined || dbUser === null) return
         let hash = dbUser.password
         bcrypt.compare(password, hash, (err, match) => {
           if (err) {
             console.log('Error - bcrpyt unable to compare password and the hash!', err)
-            io.to(socket.id).emit('loginError', err)
+            io.to(socket.id).emit('loginError', 'We are unable to log you in at this time. Please try again soon.')
           } else {
             if (match) {
               // In addition to letting the client know they've been cleared and authenticated,
               // we need to update the currently used socket ID's of this particular user to include
               // the socket they just logged in from.
-              console.log(`${dbUser.username} has logged in with socket ID ${socket.id}`)
-              io.to(socket.id).emit('loginSuccessful', {
-                id: dbUser._id,
-                username: dbUser.username,
-                firstName: dbUser.firstName,
-                lastName: dbUser.lastName,
-                conversations: dbUser.conversations
+              userSchema.findByIdAndUpdate(dbUser._id, { $addToSet: { sockets: socket.id } }, (err, user) => {
+                if (err) {
+                  console.log('Unable to update user with new socket...', user)
+                  io.to(socket.id).emit('loginError', 'We are unable to log you in at this time. Please try again soon.')
+                } else {
+                  console.log('Successfully pushed socket ', socket.id, ' to user ', user.username)
+                  console.log(`${user.username} has logged in with socket ID ${socket.id}`)
+                  io.to(socket.id).emit('loginSuccessful', {
+                    id: user._id,
+                    username: user.username,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    conversations: user.conversations
+                  })
+                }
               })
-              // dbUser.sockets.push(socket.id)
-              // dbUser.save((err, result) => {
-              //   if (err) {
-              //     console.log(`Error - could not save user ${dbUser.username}'s socket ID.'`, err)
-              //   } else {
-              //     console.log(`${result.username} has logged in with socket ID ${socket.id}`)
-              //   }
-              // })
             } else {
               // no match, login was not successful because they entered the wrong plain text password
               console.log('Incorrect password given for username:', username)
-              console.log('Authentication failed: ', params, dbUser, match)
-              io.to(socket.id).emit('loginError', "Password or username don't match")
+              io.to(socket.id).emit('loginError', 'Your password or username is incorrect.')
             }
           }
         })
       })
+  }
+
+  const addSocketToUser = params => {
+    let { socketid, userid } = params
   }
 
   const register = params => {
@@ -143,24 +156,93 @@ io.on('connection', socket => {
     })
   }
 
-  /* Socket Server Event Listeners */
+  const startConversation = params => {
+    let { sender, receiver, message } = params
+    let conversation = conversationSchema({
+      particpants: [sender.id, receiver.id],
+      messages: [message]
+    })
+    // save the conversation separately in its own document collection
+    conversion
+      .save((err, result) => {
+        if (err) {
+          io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
+        } else {
+          console.log(`Created new conversation between ${sender.id} and ${receiver.id}`)
+          io.to(socket.id).emit('loadNewConversation', result)
+        }
+      })
+      .then(result => {
+        // then, update both the sender and receiver user documents to show the new conversation
+        userSchema.find(
+          {
+            _id: {
+              $in: [mongoose.Types.ObjectId(sender.id), mongoose.Types.ObjectId(receiver.id)]
+            }
+          },
+          (err, users) => {
+            // if we didn't find both users, we need to 'back out'
+            if (err || users.length !== 2) {
+              console.log(`Unable to create conversation between ${sender.username} and ${receiver.username}`)
+              io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
+            } else {
+              let [u1, u2] = users // get both of the users
+              // push the newly created conversation onto both participants
+              u1.conversations.push(result.id)
+              u2.conversations.push(result.id)
+              const rollback = id => {
+                findByIdAndUpdate(id, { $pull: { conversations: result.id } }, (err, result) => {
+                  if (err || result === null) {
+                    console.log('Failed to rollback conversation... :(')
+                  } else {
+                    console.log(`Rollback succeeded. Conversation ${result.id} removed from ${result.username}'s conversations.`)
+                  }
+                })
+              }
+              // save u1. if that works, try to save u2. if it doesn't work, roll back u1.
+              u1.save((err, u1Result) => {
+                if (err) {
+                  console.log(`Failed to save conversation for ${u1.username}`)
+                  io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
+                } else {
+                  // it worked, now we can update u2 too.
+                  u2.save((err, u2Result) => {
+                    if (err) {
+                      console.log(`Failed to save conversation for ${u2.username}. Rolling back changes for ${u1.username}`)
+                      rollback(u1.id)
+                    } else {
+                      console.log(`Successfully added conversation ${result.id} to ${u1.id} and ${u2.id}`)
+                      // now that we've successfully worked out that both users have updated conversations,
+                      // we have to iterate through active sockets and send the updated info to each one the user
+                      // is logged into.
+                      let sockets = u1.sockets.concat(u2.sockets).filter(id => {
+                        return connections.includes(id)
+                      })
+                    }
+                  })
+                }
+              })
+            }
+          }
+        )
+      })
+  }
 
+  /* Socket Server Event Listeners */
   // accepts {username: String, password: String} so that we can check if they're the right users
   socket.on('login', params => {
-    console.log('Received login request', params)
-    authenticate(params)
+    login(params)
   })
   // accepts {username: String, password: String, firstName: String, lastName: String} to create a new user
   socket.on('register', params => {
-    console.log('Registering new user', params)
     register(params)
   })
-
+  // accepts a username to check if that username is in use
   socket.on('checkIfUserExists', username => {
     userNameExists(username)
   })
 
-  socket.on('hello', params => {
-    console.log('Client says hello!')
+  socket.on('startConversation', params => {
+    startConversation(params)
   })
 })
