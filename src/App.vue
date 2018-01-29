@@ -1,67 +1,46 @@
 <template>
   <v-app>
       <v-navigation-drawer permanent app fixed clipped :mini-variant.sync="mini" v-model="drawer">
-        <!-- News Feed -->
-        <v-toolbar flat class="transparent">
-            <v-list class="pa-0">
-              <v-list-tile avatar>
-                  <v-list-tile-avatar>
-                        <v-icon>rss_feed</v-icon>
-                  </v-list-tile-avatar>
-                  <v-list-tile-content>
-                      <v-btn flat color="blue" exact to="/">View News Feed</v-btn>
-                  </v-list-tile-content>
-                  <v-list-tile-action>
-                      <v-btn icon @click.native.stop="mini = !mini">
-                          <v-icon>chevron_left</v-icon>
-                      </v-btn>
-                  </v-list-tile-action>
-                </v-list-tile>
-            </v-list>
-        </v-toolbar>
-        <v-divider></v-divider>
-        <!-- Chat Rooms  -->
-        <v-toolbar flat class="transparent">
-            <v-list class="pa-0">
-              <v-list-tile avatar>
-                  <v-list-tile-avatar>
-                        <v-icon>forum</v-icon>
-                  </v-list-tile-avatar>
-                  <v-list-tile-content>
-                    <v-list-tile-title>Chat Rooms</v-list-tile-title>
-                  </v-list-tile-content>
-                </v-list-tile>
-            </v-list>
-        </v-toolbar>
-        <v-divider></v-divider>
-        <!-- Online people  -->
-        <v-toolbar flat class="transparent">
-            <v-list class="pa-0">
-              <v-list-tile avatar>
-                  <v-list-tile-avatar>
-                        <v-icon>people</v-icon>
-                  </v-list-tile-avatar>
-                  <v-list-tile-content>
-                    <v-list-tile-title>Online Users</v-list-tile-title>
-                  </v-list-tile-content>
-                </v-list-tile>
-            </v-list>
-        </v-toolbar>
-        <v-divider></v-divider>
-        <!-- Contact List & Recent Conversations  -->
-          <v-toolbar flat class="transparent">
-              <v-list class="pa-0">
-                  <v-list-tile avatar>
-                      <v-list-tile-avatar>
-                          <v-icon>chat_bubble</v-icon>
-                      </v-list-tile-avatar>
-                      <v-list-tile-content>
-                          <v-list-tile-title>Recent Conversations</v-list-tile-title>
-                      </v-list-tile-content>
-                  </v-list-tile>
-              </v-list>
-          </v-toolbar>
-          <contact-list></contact-list>
+        <v-list dense expand>
+          <!-- NEWS -->
+          <v-list-tile class="pa-0">
+            <v-list-tile-action>
+              <v-icon>rss_feed</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-content>
+                <v-btn flat color="blue" exact to="/">View News Feed</v-btn>
+            </v-list-tile-content>
+            <v-list-tile-action>
+                <v-btn icon @click.native.stop="mini = !mini">
+                    <v-icon>chevron_left</v-icon>
+                </v-btn>
+            </v-list-tile-action>
+          </v-list-tile>
+          <!-- Chat Rooms  -->
+          <v-list-group class="pa-0" prepend-icon="forum">
+            <v-list-tile slot="activator">
+              <v-list-tile-content>
+                <v-list-tile-title>Chat Rooms</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-group>
+          <!-- Online people  -->
+          <v-list-group class="pa-0" prepend-icon="people">
+            <v-list-tile slot="activator">
+              <v-list-tile-content>
+                <v-list-tile-title>Online Contacts</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-group>
+          <!-- Recent Conversations -->
+          <v-list-group class="pa-0" prepend-icon="chat_bubble">
+            <v-list-tile slot="activator">
+              <v-list-tile-content>
+                <v-list-tile-title>Messages</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list-group>
+        </v-list>
       </v-navigation-drawer>
       <!--  Top Toolbar -->
       <v-toolbar app fixed :clipped-left="true">
@@ -91,15 +70,55 @@
 
 <script>
 import ContactList from './components/ContactList.vue'
+import OnlineUsers from './components/OnlineUsers.vue'
 export default {
   components: {
-    'contact-list': ContactList
+    'contact-list': ContactList,
+    'online-users': OnlineUsers
   },
   data() {
     return {
       drawer: true,
       mini: true,
-      right: null
+      showOnlineUsers: false,
+      items: [
+        {
+          action: 'local_activity',
+          title: 'Attractions',
+          items: [{ title: 'List Item' }]
+        },
+        {
+          action: 'restaurant',
+          title: 'Dining',
+          active: true,
+          items: [{ title: 'Breakfast & brunch' }, { title: 'New American' }, { title: 'Sushi' }]
+        },
+        {
+          action: 'school',
+          title: 'Education',
+          items: [{ title: 'List Item' }]
+        },
+        {
+          action: 'directions_run',
+          title: 'Family',
+          items: [{ title: 'List Item' }]
+        },
+        {
+          action: 'healing',
+          title: 'Health',
+          items: [{ title: 'List Item' }]
+        },
+        {
+          action: 'content_cut',
+          title: 'Office',
+          items: [{ title: 'List Item' }]
+        },
+        {
+          action: 'local_offer',
+          title: 'Promotions',
+          items: [{ title: 'List Item' }]
+        }
+      ]
     }
   },
   methods: {

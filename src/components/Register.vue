@@ -1,11 +1,9 @@
 <template>
   <v-container fill-height fluid v-if="this.$store.state.user.id === null">
     <v-card style="margin: auto; width: 700px">
-      <v-layout>
-        <v-flex class="pt-3 text-xs-center" xs12>
-          <h2 class="headline">Register Your Account</h2>
-        </v-flex>
-      </v-layout>
+      <v-toolbar flat color="green white--text">
+        <v-toolbar-title>Create an Account</v-toolbar-title>
+      </v-toolbar>
       <v-form class="pl-2 pr-2" v-model="valid" ref="form" lazy-validation>
         <v-container grid-list-xl fluid>
           <!-- First Name -->
@@ -141,6 +139,7 @@ export default {
       }
     },
     clear() {
+      this.$refs.form.reset()
       this.firstName = ''
       this.lastName = ''
       this.username = ''

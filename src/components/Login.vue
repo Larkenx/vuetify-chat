@@ -1,56 +1,61 @@
 <template>
   <v-container fill-height fluid>
-
   <v-layout wrap align-center>
-      <v-flex class="pa-3" sm2 offset-sm2 v-if="passwordOrUsernameIncorrect()" style="min-width: 140px">
-        <v-card color="red white--text">
-          <v-layout>
-              <p class="pa-2">
-                {{this.$store.state.errors.loginError}}
-              </p>
-              <v-btn small icon @click="clearLoginError()">
-                <v-icon color="white">cancel</v-icon>
-              </v-btn>
-          </v-layout>
-        </v-card>
-      </v-flex>
-      <v-flex xs12 sm4 :offset-sm4="!passwordOrUsernameIncorrect()">
-        <v-card>
-          <v-layout>
-            <v-flex class="pt-3 text-xs-center" xs12>
-              <h2 class="headline">Sign In</h2>
-            </v-flex>
-          </v-layout>
-          <v-form class="pl-2 pr-2" v-model="valid" ref="form" lazy-validation>
-            <v-container grid-list-xl fluid>
-              <v-layout fluid>
-                <v-container fluid>
-                  <v-layout align-center>
-                    <v-flex xs12>
+      <v-flex xs6 offset-xs3>
+        <v-card style="min-width: 300px">
+          <v-toolbar flat color="blue white--text">
+            <v-toolbar-title>Sign In</v-toolbar-title>
+          </v-toolbar>
+          <v-form v-model="valid" ref="form" lazy-validation>
+            <v-container>
+              <v-layout class="ma-1" fluid wrap>
+                <v-container fluid grid-list-md>
+                  <v-layout align-center-justify wrap>
+                    <v-flex sm12 md6>
                       <v-text-field
+                        prepend-icon="person"
                         label="Username"
                         v-model="username"
                         required
+                        :error="passwordOrUsernameIncorrect()"
                       ></v-text-field>
                     </v-flex>
+                    <v-flex sm12 md5 offset-md1>
+                        <v-card class="pa-1" style="min-height: 50px" color="red white--text" v-if="passwordOrUsernameIncorrect()">
+                          <v-layout wrap align-center>
+                            <v-flex xs10 fill-height>
+                                <b style="font-size: 13px;">{{this.$store.state.errors.loginError}}</b>
+                            </v-flex>
+                            <v-flex xs2 fill-height>
+                              <v-btn small icon @click="clearLoginError()">
+                                <v-icon color="white">cancel</v-icon>
+                              </v-btn>
+                            </v-flex>
+                          </v-layout>
+                        </v-card>
+                    </v-flex>
                   </v-layout>
-                  <v-layout align-center>
-                    <v-flex xs12>
+                  <v-layout align-center wrap>
+                    <v-flex sm12 md6>
                       <v-text-field
+                        prepend-icon="lock"
                         label="Password"
                         v-model="password"
                         type="password"
                         required
+                        :error="passwordOrUsernameIncorrect()"
                       ></v-text-field>
                     </v-flex>
-                  </v-layout>
-                  <v-layout align-center>
-                    <v-flex xs12 class="text-xs-center">
-                      <router-link exact to="/register">Forgot your password?</router-link>
+                    <v-flex sm12 md6 class="text-xs-center">
+                      <v-layout>
+                        <v-flex xs12>
+                          <router-link exact to="/register">Forgot your password?</router-link>
+                          <span class="mr-2 ml-2 right_border"></span>
+                          <router-link exact to="/register">Create an account</router-link>
+                        </v-flex>
+                      </v-layout>
+
                     </v-flex>
-                    <!-- <v-flex xs6>
-                      If you don't have an account, but you'd like to create one, you can register <router-link exact to="/register">here</router-link>.
-                    </v-flex> -->
                   </v-layout>
                 </v-container>
               </v-layout>
@@ -86,6 +91,7 @@ export default {
     submit() {
       if (this.$refs.form.validate()) {
         console.log('Logging in...')
+        this.clearLoginError()
         this.$store.state.socket.emit('login', {
           username: this.username,
           password: this.password
@@ -107,5 +113,10 @@ export default {
 <style>
 a {
   text-decoration: none;
+}
+
+.right_border {
+  border-right: 2px solid #d1d1d1;
+  height: 20px;
 }
 </style>
