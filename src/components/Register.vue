@@ -17,7 +17,6 @@
               ></v-text-field>
             </v-flex>
             <!-- Last Name -->
-
             <v-flex xs12 sm6>
               <v-text-field
                 label="Last Name"
@@ -27,32 +26,31 @@
               ></v-text-field>
             </v-flex>
           </v-layout>
-          <!-- Username -->
+          <!-- email -->
           <v-layout>
             <v-flex xs6>
               <v-text-field
-                label="Username"
-                v-model="username"
-                :rules="[v => !!v || ' Username is required.']"
+                label="email"
+                v-model="email"
+                :rules="emailRules"
                 required
-                v-on:blur="checkIfUserExists()"
-                :error="usernameTaken()"
+                v-on:blur="checkIfEmailExists()"
+                :error="emailTaken()"
               ></v-text-field>
             </v-flex>
-            <!-- Username errors  -->
-            <v-flex xs6 v-if="usernameTaken()">
+            <!-- email errors  -->
+            <v-flex xs6 v-if="emailTaken()">
                 <v-layout class="text-xs-center" align-center>
                     <v-icon class="pa-1" color="red">error</v-icon>
-                    Sorry, that username is taken.
+                    Sorry, that email is taken.
                 </v-layout>
             </v-flex>
-            <v-flex xs6 v-else-if="username.trim() !== '' && !usernameTaken()">
+            <v-flex xs6 v-else-if="email.trim() !== '' && !emailTaken()">
               <v-layout class="text-xs-center" align-center>
                   <v-icon class="pa-1" color="green">check_circle</v-icon>
-                  That username is available!
+                  That email is available!
               </v-layout>
             </v-flex>
-
           </v-layout>
           <v-layout>
             <v-flex xs6>
@@ -113,10 +111,17 @@
 export default {
   data: () => ({
     passwordRules: [p => !!p || 'Password is required.', p => !(p.length <= 8) || 'Password must be longer than 8 characters.'],
+    emailRules: [
+      value => {
+        const pattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        return pattern.test(value) || 'Invalid e-mail address.'
+      },
+      v => !!v || ' email is required.'
+    ],
     valid: true,
     firstName: 'Steven',
     lastName: 'Myers',
-    username: 'larkenx ',
+    email: 'larkenx ',
     password: 'ilikecandysomuch',
     confirmPassword: 'ilikecandysomuch'
   }),
@@ -131,7 +136,7 @@ export default {
         this.$store.state.socket.emit('register', {
           firstName: this.firstName.trim(),
           lastName: this.lastName.trim(),
-          username: this.username.trim(),
+          email: this.email.trim(),
           password: this.password
         })
       } else {
@@ -142,18 +147,18 @@ export default {
       this.$refs.form.reset()
       this.firstName = ''
       this.lastName = ''
-      this.username = ''
+      this.email = ''
       this.password = ''
       this.confirmPassword = ''
     },
-    usernameTaken() {
+    emailTaken() {
       return (
         this.$store.state.errors.registrationError !== null &&
-        this.$store.state.errors.registrationError.toLowerCase().includes('username')
+        this.$store.state.errors.registrationError.toLowerCase().includes('email')
       )
     },
-    checkIfUserExists() {
-      this.$store.state.socket.emit('checkIfUserExists', this.username.trim())
+    checkIfEmailExists() {
+      this.$store.state.socket.emit('checkIfEmailExists', this.email.trim())
     }
   }
 }

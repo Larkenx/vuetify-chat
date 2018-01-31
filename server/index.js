@@ -10,6 +10,23 @@ const app = express()
 const userSchema = require('./models/user')
 const conversationSchema = require('./models/conversation')
 
+/* Mailgun configuration */
+// const mailgun = require('mailgun-js')({ apiKey: config.mailgun.apiKey, domain: config.mailgun.domain })
+// const data = {
+//   from: 'Vuetify Chat <vuetify-chat-password-reset@sandbox8d5f98e2d81b40bcbb9551b04c44ba40.mailgun.org>',
+//   to: 'larkenx@gmail.com',
+//   subject: 'Reset your password',
+//   text: 'Testing some Mailgun awesomeness!'
+// }
+//
+// mailgun.messages().send(data, (err, body) => {
+//   // console.log(err)
+//   if (err) {
+//     console.log('Failed to send user password recovery')
+//   }
+//   // console.log(body)
+// })
+
 /* Connecting to mongoose */
 let { user, password } = config.credentials
 let { host, port, dbName } = config.database
@@ -28,13 +45,18 @@ db.once('open', () => {
   console.log('Successfully connected to MongoDB.')
 })
 
+/* serving built client */
+app.use('/', express.static('dist'))
+
 /* serving the express & socket server */
 let serve = http.createServer(app)
 let io = socketServer(serve)
+
 serve.listen(3000, () => {
   console.log('Socket Server running at http://localhost:3000')
 })
 let connections = []
+let onlineUsers = []
 io.on('connection', socket => {
   console.log(`Socket ID ${socket.id} has connected.`)
   connections.push(socket.id)
@@ -44,25 +66,31 @@ io.on('connection', socket => {
     if (i > -1) {
       connections.splice(i, 1)
     }
+    onlineUsers = onlineUsers.filter(u => {
+      return u.socket !== socket.id
+    })
+    io.emit('loadOnlineUsers', onlineUsers)
   })
+
   const mockLogin = () => {
     const mockUserData = {
       _id: 1,
-      username: 'LadiesMan1995',
+      email: 'larkenx@gmail.com',
       firstName: 'Steven',
       lastName: 'Myers',
       conversations: []
     }
     io.emit('loginSuccessful', mockUserData)
   }
+
   /* Mongoose Helper Functions */
   const login = params => {
-    let { username, password } = params
+    let { email, password } = params
     userSchema
-      .findOne({ username }, (err, dbUser) => {
+      .findOne({ email }, (err, dbUser) => {
         if (err || dbUser === null) {
-          console.log('Error - unable to find user with userid: ', username)
-          io.to(socket.id).emit('loginError', 'Your password or username is incorrect.')
+          console.log('Error - unable to find user with userid: ', email)
+          io.to(socket.id).emit('loginError', 'Your password or email is incorrect.')
         }
       })
       .then(dbUser => {
@@ -82,11 +110,14 @@ io.on('connection', socket => {
                   console.log('Unable to update user with new socket...', user)
                   io.to(socket.id).emit('loginError', 'We are unable to log you in at this time. Please try again soon.')
                 } else {
-                  console.log('Successfully pushed socket ', socket.id, ' to user ', user.username)
-                  console.log(`${user.username} has logged in with socket ID ${socket.id}`)
+                  console.log('Successfully pushed socket ', socket.id, ' to user ', user.email)
+                  console.log(`${user.email} has logged in with socket ID ${socket.id}`)
+                  let { firstName, lastName, _id } = user
+                  onlineUsers.push({ firstName, lastName, id: _id, socket: socket.id })
+                  io.emit('loadOnlineUsers', onlineUsers)
                   io.to(socket.id).emit('loginSuccessful', {
                     id: user._id,
-                    username: user.username,
+                    email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     conversations: user.conversations
@@ -95,8 +126,8 @@ io.on('connection', socket => {
               })
             } else {
               // no match, login was not successful because they entered the wrong plain text password
-              console.log('Incorrect password given for username:', username)
-              io.to(socket.id).emit('loginError', 'Your password or username is incorrect.')
+              console.log('Incorrect password given for email:', email)
+              io.to(socket.id).emit('loginError', 'Your password or email is incorrect.')
             }
           }
         })
@@ -110,46 +141,40 @@ io.on('connection', socket => {
   const register = params => {
     console.log('Creating new user with params: ', { ...params, conversations: [], sockets: [socket.id] })
     let user = new userSchema({ ...params, conversations: [], sockets: [socket.id] })
-    userSchema.findOne({ username: params.username }, (err, dbUser) => {
+    userSchema.findOne({ email: params.email }, (err, dbUser) => {
       if (err) {
         console.log(err)
         io.to(socket.id).emit('registrationError', 'Sorry, you currently cannot register at this time.') // server problem
       }
       if (dbUser !== null) {
-        // a user with this username already exists!
-        console.log('Error - cannot register username that already exists')
-        io.to(socket.id).emit('registrationError', 'Username already exists!')
+        // a user with this email already exists!
+        console.log('Error - cannot register email that already exists')
+        io.to(socket.id).emit('registrationError', 'email already exists!')
       } else {
         user.save((err, result) => {
           if (err) {
             console.log('Error - failed to register user with params : ', params)
             io.to(socket.id).emit('registrationError', 'Sorry, you currently cannot register at this time.') // server problem
           } else {
-            console.log('Successfully registered new user : ', result.username)
-            io.to(socket.id).emit('registrationSuccess', {
-              id: result._id,
-              username: result.username,
-              firstName: result.firstName,
-              lastName: result.lastName,
-              conversations: result.conversations
-            })
+            console.log('Successfully registered new user : ', result.email)
+            login({ email: params.email, password: params.password })
           }
         })
       }
     })
   }
 
-  const userNameExists = username => {
-    userSchema.findOne({ username }, (err, dbUser) => {
+  const emailExists = email => {
+    userSchema.findOne({ email }, (err, dbUser) => {
       if (err) {
         console.log(err)
-        io.to(socket.id).emit('error', 'Sorry, cannot currently check to see if username exists.') // server problem
+        io.to(socket.id).emit('error', 'Sorry, cannot currently check to see if email exists.') // server problem
       }
 
       if (dbUser !== null) {
-        // a user with this username already exists!
-        console.log('Error - cannot register username that already exists')
-        io.to(socket.id).emit('registrationError', 'Username already exists!')
+        // a user with this email already exists!
+        console.log('Error - cannot register email that already exists')
+        io.to(socket.id).emit('registrationError', 'email already exists!')
       } else {
         io.to(socket.id).emit('registrationError', null)
       }
@@ -183,7 +208,7 @@ io.on('connection', socket => {
           (err, users) => {
             // if we didn't find both users, we need to 'back out'
             if (err || users.length !== 2) {
-              console.log(`Unable to create conversation between ${sender.username} and ${receiver.username}`)
+              console.log(`Unable to create conversation between ${sender.email} and ${receiver.email}`)
               io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
             } else {
               let [u1, u2] = users // get both of the users
@@ -195,20 +220,20 @@ io.on('connection', socket => {
                   if (err || result === null) {
                     console.log('Failed to rollback conversation... :(')
                   } else {
-                    console.log(`Rollback succeeded. Conversation ${result.id} removed from ${result.username}'s conversations.`)
+                    console.log(`Rollback succeeded. Conversation ${result.id} removed from ${result.email}'s conversations.`)
                   }
                 })
               }
               // save u1. if that works, try to save u2. if it doesn't work, roll back u1.
               u1.save((err, u1Result) => {
                 if (err) {
-                  console.log(`Failed to save conversation for ${u1.username}`)
+                  console.log(`Failed to save conversation for ${u1.email}`)
                   io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
                 } else {
                   // it worked, now we can update u2 too.
                   u2.save((err, u2Result) => {
                     if (err) {
-                      console.log(`Failed to save conversation for ${u2.username}. Rolling back changes for ${u1.username}`)
+                      console.log(`Failed to save conversation for ${u2.email}. Rolling back changes for ${u1.email}`)
                       rollback(u1.id)
                     } else {
                       console.log(`Successfully added conversation ${result.id} to ${u1.id} and ${u2.id}`)
@@ -232,18 +257,52 @@ io.on('connection', socket => {
       })
   }
 
+  const mockCreateUsers = () => {
+    const users = [
+      {
+        firstName: 'Steven',
+        lastName: 'Myers',
+        email: 'test@example.com',
+        password: 'ilikecandysomuch'
+      },
+      {
+        firstName: 'John',
+        lastName: 'Heveran',
+        email: 'john@cio.com',
+        password: 'libertyisawesome'
+      },
+      {
+        firstName: 'David',
+        lastName: 'Short',
+        email: 'david@cio.com',
+        password: 'imakemoney'
+      }
+    ]
+
+    users.forEach(u => register(u))
+  }
+
+  // mockCreateUsers()
+
   /* Socket Server Event Listeners */
-  // accepts {username: String, password: String} so that we can check if they're the right users
+  // accepts {email: String, password: String} so that we can check if they're the right users
   socket.on('login', params => {
     login(params)
   })
-  // accepts {username: String, password: String, firstName: String, lastName: String} to create a new user
+
+  socket.on('logout', params => {
+    onlineUsers = onlineUsers.filter(u => {
+      return u.id !== params.id || u.id !== params.socket
+    })
+    io.emit('loadOnlineUsers', onlineUsers)
+  })
+  // accepts {email: String, password: String, firstName: String, lastName: String} to create a new user
   socket.on('register', params => {
     register(params)
   })
-  // accepts a username to check if that username is in use
-  socket.on('checkIfUserExists', username => {
-    userNameExists(username)
+  // accepts a email to check if that email is in use
+  socket.on('checkIfEmailExists', email => {
+    emailExists(email)
   })
 
   socket.on('startConversation', params => {

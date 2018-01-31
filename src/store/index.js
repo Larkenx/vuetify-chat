@@ -11,6 +11,7 @@ console.log('Connecting to socket server at ' + window.location.hostname + ':300
 const types = {
   loadUserInformation: 'LOAD_USER_INFORMATION',
   loadNewConversation: 'LOAD_NEW_CONVERSATION',
+  loadOnlineUsers: 'LOAD_ONLINE_USERS',
   loadError: 'LOAD_ERROR',
   clearError: 'CLEAR_ERROR',
   logout: 'LOGOUT'
@@ -18,7 +19,7 @@ const types = {
 
 const initialUserState = {
   id: null,
-  username: null,
+  email: null,
   firstName: null,
   lastName: null,
   conversations: null
@@ -29,6 +30,7 @@ let store = new Vuex.Store({
     socket,
     user: initialUserState,
     conversations: [],
+    onlineUsers: [],
     errors: {
       registrationError: null,
       loginError: null
@@ -43,6 +45,9 @@ let store = new Vuex.Store({
     },
     loadNewConversation({ commit }, conversation) {
       commit(types.loadNewConversation, conversation)
+    },
+    loadOnlineUsers({ commit }, users) {
+      commit(types.loadOnlineUsers, users)
     },
     clearError({ commit }, type) {
       commit(types.clearError, type)
@@ -68,6 +73,9 @@ let store = new Vuex.Store({
       state.conversations.push(conversation)
       state.user.conversations.push(conversation._id)
     },
+    [types.loadOnlineUsers](state, users) {
+      state.onlineUsers = users
+    },
     [types.clearError](state, type) {
       if (type === 'registration') {
         state.errors.registrationError = null
@@ -76,6 +84,7 @@ let store = new Vuex.Store({
       }
     },
     [types.logout](state) {
+      socket.emit('logout', state.user.id)
       state.user = { ...initialUserState }
       router.push('/login')
     }
@@ -91,6 +100,10 @@ socket.on('loginSuccessful', userData => {
 socket.on('loadNewConversation', conversation => {
   store.dispatch('loadNewConversation', conversation)
   // router.push(`/chat/${conversation.id}`)
+})
+
+socket.on('loadOnlineUsers', users => {
+  store.dispatch('loadOnlineUsers', users)
 })
 
 socket.on('registrationSuccess', userData => {
