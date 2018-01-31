@@ -28,13 +28,18 @@ const conversationSchema = require('./models/conversation')
 // })
 
 /* Connecting to mongoose */
-let { user, password } = config.credentials
-let { host, port, dbName } = config.database
 let options = {
   keepAlive: 300000,
   connectTimeoutMS: 30000
 }
-mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`, options)
+
+if (process.env.DEV == 'false') {
+  let { user, password } = config.credentials
+  let { host, port, dbName } = config.database
+  mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`, options)
+} else {
+  mongoose.connect(process.env.MONGODB_URI, options)
+}
 
 let db = mongoose.connection
 db.on('error', err => {
