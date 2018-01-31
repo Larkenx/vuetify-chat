@@ -5,7 +5,6 @@ const mongoose = require('mongoose')
 const http = require('http')
 const socketServer = require('socket.io')
 const bcrypt = require('bcrypt')
-const config = require('../dbconfig') // private dbconfig with MongoDB config
 const app = express()
 const userSchema = require('./models/user')
 const conversationSchema = require('./models/conversation')
@@ -33,13 +32,14 @@ let options = {
   connectTimeoutMS: 30000
 }
 
-if (process.env.DEV == 'false') {
-  let { user, password } = config.credentials
-  let { host, port, dbName } = config.database
-  mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`, options)
-} else {
-  mongoose.connect(process.env.MONGODB_URI, options)
-}
+// if (process.env.DEV == 'false') {
+//   const config = require('../dbconfig') // private dbconfig with MongoDB config
+//   let { user, password } = config.credentials
+//   let { host, port, dbName } = config.database
+//   mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`, options)
+// } else {
+mongoose.connect(process.env.MONGODB_URI, options)
+// }
 
 let db = mongoose.connection
 db.on('error', err => {
@@ -57,7 +57,7 @@ app.use('/', express.static('dist'))
 let serve = http.createServer(app)
 let io = socketServer(serve)
 
-serve.listen(3000, () => {
+serve.listen(process.env.PORT || 5000, () => {
   console.log('Socket Server running at http://localhost:3000')
 })
 let connections = []
