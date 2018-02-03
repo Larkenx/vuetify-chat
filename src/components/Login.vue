@@ -66,7 +66,7 @@
 export default {
   data: () => ({
     valid: true,
-    email: 'larkenx@gmail.com',
+    email: 'test@example.com',
     password: 'ilikecandysomuch'
   }),
   methods: {

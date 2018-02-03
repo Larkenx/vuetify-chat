@@ -27,7 +27,8 @@ export default {
   },
   methods: {
     getOnlineUsers() {
-      return this.$store.state.onlineUsers.filter(u => {
+      // console.log(this.$store.state.user)
+      return this.$store.state.loadedUsers.filter(u => {
         return u.id !== this.$store.state.user.id && u.socket !== this.$store.state.socket.id
       })
     }

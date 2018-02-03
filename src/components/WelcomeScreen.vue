@@ -17,20 +17,20 @@
         </v-card-title>
         <v-divider></v-divider>
         <v-card-actions class="post_actions">
-          <v-badge class="badge_numeric" overlay overlap top right>
-            <span class="badge_text_numeric" slot="badge">{{post.likes}}</span>
+          <!-- <v-badge class="badge_numeric" overlay overlap top right> -->
+            <!-- <span class="badge_text_numeric" slot="badge">{{post.likes}}</span> -->
             <v-btn icon>
               <v-icon color="blue lighten-2">thumb_up</v-icon>
             </v-btn>
-          </v-badge>
-          <v-badge class="badge_numeric" color="green" overlay overlap top right>
-            <span class="badge_text_numeric" slot="badge">{{post.comments.length}}</span>
+          <!-- </v-badge> -->
+          <!-- <v-badge class="badge_numeric" color="green" overlay overlap top right> -->
+            <!-- <span class="badge_text_numeric" slot="badge">{{post.comments.length}}</span> -->
             <v-btn icon>
               <v-icon color="green darken-3">comment</v-icon>
             </v-btn>
-          </v-badge>
-          <v-spacer> </v-spacer>
-          <v-btn flat>View Comments</v-btn>
+          <!-- </v-badge> -->
+          <!-- <v-spacer> </v-spacer> -->
+          <!-- <v-btn flat>View Comments</v-btn> -->
           <v-spacer></v-spacer>
           <v-btn icon>
             <v-icon color="red">favorite</v-icon>

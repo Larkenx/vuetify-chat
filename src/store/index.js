@@ -11,7 +11,7 @@ console.log('Connecting to socket server at ' + window.location.hostname + ':' +
 const types = {
   loadUserInformation: 'LOAD_USER_INFORMATION',
   loadNewConversation: 'LOAD_NEW_CONVERSATION',
-  loadUsers: 'LOAD_ONLINE_USERS',
+  loadUsers: 'LOAD_USERS',
   loadError: 'LOAD_ERROR',
   clearError: 'CLEAR_ERROR',
   logout: 'LOGOUT'
@@ -22,8 +22,8 @@ const initialUserState = {
   email: null,
   firstName: null,
   lastName: null,
-  conversations: null,
-  contacts: null
+  conversations: [],
+  contacts: []
 }
 
 let store = new Vuex.Store({
@@ -32,6 +32,7 @@ let store = new Vuex.Store({
     user: initialUserState,
     conversations: [],
     loadedUsers: [],
+    directMessages: {},
     errors: {
       registrationError: null,
       loginError: null
@@ -73,6 +74,14 @@ let store = new Vuex.Store({
     [types.loadNewConversation](state, conversation) {
       state.conversations.push(conversation)
       state.user.conversations.push(conversation._id)
+      if (conversation.particpants.length === 2) {
+        let p = conversation.participants.filter(u => {
+          return u !== state.user.id
+        })
+        if (p.length === 1) {
+          state.directMessages[p[0].id] = conversation
+        }
+      }
     },
     [types.loadUsers](state, users) {
       state.loadedUsers = users
@@ -85,7 +94,7 @@ let store = new Vuex.Store({
       }
     },
     [types.logout](state) {
-      socket.emit('logout', state.user.id)
+      socket.emit('logout', state.user)
       state.user = { ...initialUserState }
       router.push('/login')
     }

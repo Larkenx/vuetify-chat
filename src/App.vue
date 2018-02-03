@@ -1,6 +1,6 @@
 <template>
   <v-app dark>
-      <v-navigation-drawer permanent app fixed clipped :mini-variant.sync="mini" v-model="drawer">
+      <v-navigation-drawer permanent app fixed clipped :mini-variant.sync="mini" v-model="drawer" v-if="loggedIn()">
         <v-list expand>
           <!-- NEWS -->
           <v-list-tile class="pa-0">
@@ -64,9 +64,9 @@
       <v-content>
           <router-view/>
       </v-content>
-      <v-footer app>
+      <!-- <v-footer app>
           <span>&copy; 2018 Steven Myers</span>
-      </v-footer>
+      </v-footer> -->
   </v-app>
 </template>
 
@@ -82,50 +82,6 @@ export default {
     return {
       drawer: true,
       mini: true,
-      contacts: [
-        { id: '1', active: true, name: 'Jason Oner', avatar: 'https://randomuser.me/api/portraits/men/86.jpg' },
-        { id: '2', active: true, name: 'Ranee Carlson', avatar: 'https://randomuser.me/api/portraits/women/15.jpg' },
-        { id: '3', name: 'Cindy Baker', avatar: 'https://randomuser.me/api/portraits/women/20.jpg' },
-        { id: '4', name: 'Ali Connors', avatar: 'https://randomuser.me/api/portraits/women/10.jpg' }
-      ],
-      items: [
-        {
-          action: 'local_activity',
-          title: 'Attractions',
-          items: [{ title: 'List Item' }]
-        },
-        {
-          action: 'restaurant',
-          title: 'Dining',
-          active: true,
-          items: [{ title: 'Breakfast & brunch' }, { title: 'New American' }, { title: 'Sushi' }]
-        },
-        {
-          action: 'school',
-          title: 'Education',
-          items: [{ title: 'List Item' }]
-        },
-        {
-          action: 'directions_run',
-          title: 'Family',
-          items: [{ title: 'List Item' }]
-        },
-        {
-          action: 'healing',
-          title: 'Health',
-          items: [{ title: 'List Item' }]
-        },
-        {
-          action: 'content_cut',
-          title: 'Office',
-          items: [{ title: 'List Item' }]
-        },
-        {
-          action: 'local_offer',
-          title: 'Promotions',
-          items: [{ title: 'List Item' }]
-        }
-      ]
     }
   },
   methods: {
@@ -136,8 +92,10 @@ export default {
     logout() {
       console.log('Logging out...')
       this.$store.dispatch('logout')
+    },
+    loggedIn() {
+      return this.$store.state.user.id !== null
     }
   },
   name: 'App'
-}
-</script>
+}</script>
