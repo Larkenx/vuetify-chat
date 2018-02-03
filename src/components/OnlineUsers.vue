@@ -11,17 +11,19 @@
           <span class="white--text">{{user.firstName[0] + user.lastName[0]}}</span>
         </v-avatar>
       </v-list-tile-avatar>
-
       <v-list-tile-content>
         <v-list-tile-title>{{`${user.firstName} ${user.lastName}`}}</v-list-tile-title>
       </v-list-tile-content>
     </v-list-tile>
   </v-list-group>
 </template>
+
 <script>
 export default {
   data() {
-    return {}
+    return {
+      users: this.$store.state.onlineUsers
+    }
   },
   methods: {
     getOnlineUsers() {

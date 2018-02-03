@@ -4,14 +4,14 @@ import io from 'socket.io-client'
 import router from '../router'
 
 Vue.use(Vuex)
-
-const socket = io.connect(window.location.hostname + ':' + window.location.port) // connect to the express server
+const port = process.env.PORT || 5000
+const socket = io.connect(window.location.hostname + ':' + port) // connect to the express server
 console.log('Connecting to socket server at ' + window.location.hostname + ':' + window.location.port)
 
 const types = {
   loadUserInformation: 'LOAD_USER_INFORMATION',
   loadNewConversation: 'LOAD_NEW_CONVERSATION',
-  loadOnlineUsers: 'LOAD_ONLINE_USERS',
+  loadUsers: 'LOAD_ONLINE_USERS',
   loadError: 'LOAD_ERROR',
   clearError: 'CLEAR_ERROR',
   logout: 'LOGOUT'
@@ -22,7 +22,8 @@ const initialUserState = {
   email: null,
   firstName: null,
   lastName: null,
-  conversations: null
+  conversations: null,
+  contacts: null
 }
 
 let store = new Vuex.Store({
@@ -30,7 +31,7 @@ let store = new Vuex.Store({
     socket,
     user: initialUserState,
     conversations: [],
-    onlineUsers: [],
+    loadedUsers: [],
     errors: {
       registrationError: null,
       loginError: null
@@ -46,8 +47,8 @@ let store = new Vuex.Store({
     loadNewConversation({ commit }, conversation) {
       commit(types.loadNewConversation, conversation)
     },
-    loadOnlineUsers({ commit }, users) {
-      commit(types.loadOnlineUsers, users)
+    loadUsers({ commit }, users) {
+      commit(types.loadUsers, users)
     },
     clearError({ commit }, type) {
       commit(types.clearError, type)
@@ -73,8 +74,8 @@ let store = new Vuex.Store({
       state.conversations.push(conversation)
       state.user.conversations.push(conversation._id)
     },
-    [types.loadOnlineUsers](state, users) {
-      state.onlineUsers = users
+    [types.loadUsers](state, users) {
+      state.loadedUsers = users
     },
     [types.clearError](state, type) {
       if (type === 'registration') {
@@ -102,8 +103,8 @@ socket.on('loadNewConversation', conversation => {
   // router.push(`/chat/${conversation.id}`)
 })
 
-socket.on('loadOnlineUsers', users => {
-  store.dispatch('loadOnlineUsers', users)
+socket.on('loadUsers', users => {
+  store.dispatch('loadUsers', users)
 })
 
 socket.on('registrationSuccess', userData => {

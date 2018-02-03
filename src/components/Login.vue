@@ -38,19 +38,17 @@
               </v-layout>
               <!-- Final row with block button -->
               <v-layout align-center>
-                <span class="pl-2">
+                <!-- <span class="pl-2"> -->
                   <router-link exact to="/register">Forgot your password?</router-link>
-                  <span class="mr-2 ml-2 right_border"></span>
-                  <router-link exact to="/register">Create an account</router-link>
-                </span>
-
+                  <!-- <span class="hidden-sm-and-down mr-2 ml-2 right_border"></span>
+                  <router-link exact to="/register">Create an account</router-link> -->
+                <!-- </span> -->
                 <v-spacer></v-spacer>
                 <v-btn
                   raised
                   class="white--text"
                   color="blue"
                   @click="submit"
-                  :disabled="!valid"
                 >
                   Login
                 </v-btn>
@@ -68,21 +66,17 @@
 export default {
   data: () => ({
     valid: true,
-    email: 'test@example.com',
+    email: 'larkenx@gmail.com',
     password: 'ilikecandysomuch'
   }),
   methods: {
     submit() {
-      if (this.$refs.form.validate()) {
-        console.log('Logging in...')
-        this.clearLoginError()
-        this.$store.state.socket.emit('login', {
-          email: this.email,
-          password: this.password
-        })
-      } else {
-        console.log("Couldn't validate the form inputs...")
-      }
+      console.log('Logging in...')
+      this.clearLoginError()
+      this.$store.state.socket.emit('login', {
+        email: this.email,
+        password: this.password
+      })
     },
     passwordOrEmailIncorrect() {
       return this.$store.state.errors.loginError !== null

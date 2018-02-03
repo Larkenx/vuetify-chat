@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app dark>
       <v-navigation-drawer permanent app fixed clipped :mini-variant.sync="mini" v-model="drawer">
         <v-list expand>
           <!-- NEWS -->

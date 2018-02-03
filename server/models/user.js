@@ -10,6 +10,7 @@ const userSchema = new Schema(
     firstName: String,
     lastName: String,
     conversations: [String],
+    contacts: [String],
     sockets: [String]
   },
   { collection: 'User' }

@@ -49,39 +49,16 @@ export default {
   props: ['userID'],
   data() {
     return {
-      contacts: {
-        1: {
-          id: '1',
-          active: true,
-          name: 'Jason Oner',
-          avatar: 'https://randomuser.me/api/portraits/men/86.jpg',
-          messages: [
-            { sender: 'you', text: "Hey Jason, what's up?" },
-            { sender: 'Jason Oner', text: 'Yo, not much man. How about you?' },
-            { sender: 'you', text: 'Just programming some Vue chat! Wanna see the source?' },
-            { sender: 'Jason Oner', text: 'Nah man, maybe later.' },
-            { sender: 'Jason Oner', text: 'Do you wanna see a movie tonight?' },
-            { sender: 'you', text: 'Maybe, lemme ask my wife' }
-          ]
-        },
-        2: {
-          id: '2',
-          active: true,
-          name: 'Ranee Carlson',
-          avatar: 'https://randomuser.me/api/portraits/women/15.jpg'
-        },
-        3: {
-          id: '3',
-          name: 'Cindy Baker',
-          avatar: 'https://randomuser.me/api/portraits/women/20.jpg'
-        },
-        4: {
-          id: '4',
-          name: 'Ali Connors',
-          avatar: 'https://randomuser.me/api/portraits/women/10.jpg'
-        }
-      }
+      contact: 
+      messages:
     }
+  },
+  sendMessage() {
+    // When I open a chat with someone, I want to see if there is an existing conversation between them
+    // -- Yes, they share a conversation
+    // Load the conversation from the vuex store and display messages as normally
+    // -- No, no conversation has been stored in the db yet.
+    // We need to wait until someone makes the first message. When the first message is created, create a conversation
   }
 }
 </script>

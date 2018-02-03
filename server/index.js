@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt')
 const app = express()
 const userSchema = require('./models/user')
 const conversationSchema = require('./models/conversation')
+require('dotenv').config()
 
 /* Mailgun configuration */
 // const mailgun = require('mailgun-js')({ apiKey: config.mailgun.apiKey, domain: config.mailgun.domain })
@@ -31,15 +32,8 @@ let options = {
   keepAlive: 300000,
   connectTimeoutMS: 30000
 }
-
-// if (process.env.DEV == 'false') {
-//   const config = require('../dbconfig') // private dbconfig with MongoDB config
-//   let { user, password } = config.credentials
-//   let { host, port, dbName } = config.database
-//   mongoose.connect(`mongodb://${user}:${password}@${host}:${port}/${dbName}`, options)
-// } else {
-mongoose.connect(process.env.MONGODB_URI, options)
-// }
+mongoose.connect('mongodb://localhost:27017', options)
+// mongoose.connect(process.env.MONGODB_URI, options)
 
 let db = mongoose.connection
 db.on('error', err => {
@@ -58,23 +52,24 @@ let serve = http.createServer(app)
 let io = socketServer(serve)
 
 serve.listen(process.env.PORT || 5000, () => {
-  console.log('Socket Server running at http://localhost:3000')
+  console.log('Socket Server running on port:' + (process.env.PORT || 5000))
 })
 let connections = []
-let onlineUsers = []
+let loadedUsers = []
 io.on('connection', socket => {
   console.log(`Socket ID ${socket.id} has connected.`)
   connections.push(socket.id)
+
   socket.on('disconnect', () => {
     console.log(`Socket ID ${socket.id} has disconnected.`)
     let i = connections.indexOf(socket.id)
     if (i > -1) {
       connections.splice(i, 1)
     }
-    onlineUsers = onlineUsers.filter(u => {
+    loadedUsers = loadedUsers.filter(u => {
       return u.socket !== socket.id
     })
-    io.emit('loadOnlineUsers', onlineUsers)
+    io.emit('loadUsers', loadedUsers)
   })
 
   const mockLogin = () => {
@@ -118,8 +113,8 @@ io.on('connection', socket => {
                   console.log('Successfully pushed socket ', socket.id, ' to user ', user.email)
                   console.log(`${user.email} has logged in with socket ID ${socket.id}`)
                   let { firstName, lastName, _id } = user
-                  onlineUsers.push({ firstName, lastName, id: _id, socket: socket.id })
-                  io.emit('loadOnlineUsers', onlineUsers)
+                  loadedUsers.push({ firstName, lastName, id: _id, socket: socket.id })
+                  io.emit('loadUsers', loadedUsers)
                   io.to(socket.id).emit('loginSuccessful', {
                     id: user._id,
                     email: user.email,
@@ -262,6 +257,42 @@ io.on('connection', socket => {
       })
   }
 
+  const loadUsers = params => {
+    // need to get all of the active users in the requesting sockets
+    // chat rooms and contact list of the requesting socket
+    userSchema.findById(params.id, (err, user) => {
+      if (err) {
+        console.log('Could not find user ID', params.id, ' for collecting loaded users')
+        // emit some error to the Client
+        return
+      }
+
+      const { contacts, conversations } = user // eventually add the users' chatrooms here too!
+      conversationSchema.find(
+        {
+          // we want to find all the conversations in the conversations collection
+          _id: {
+            $in: [
+              conversations.map(c => {
+                return mongoose.Types.ObjectId(c)
+              })
+            ] // for each coversation id convert it to objectid
+          }
+        },
+        (conversationErr, conversationObjects) => {
+          if (conversationErr) {
+            console.log('Could not retrieve the conversations')
+            // emit some error...?
+          }
+
+          // at this step, we have access to all of the users from the connecting socket
+        }
+      )
+
+      const allUsers = null // all user ID's from conversation participants and the users' contacts
+    })
+  }
+
   const mockCreateUsers = () => {
     const users = [
       {
@@ -296,10 +327,11 @@ io.on('connection', socket => {
   })
 
   socket.on('logout', params => {
-    onlineUsers = onlineUsers.filter(u => {
+    loadedUsers = loadedUsers.filter(u => {
       return u.id !== params.id || u.id !== params.socket
     })
-    io.emit('loadOnlineUsers', onlineUsers)
+    loadUsers(params)
+    // io.emit('loadUsers', loadedUsers)
   })
   // accepts {email: String, password: String, firstName: String, lastName: String} to create a new user
   socket.on('register', params => {

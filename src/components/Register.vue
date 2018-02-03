@@ -30,7 +30,7 @@
           <v-layout>
             <v-flex xs6>
               <v-text-field
-                label="email"
+                label="Email Address"
                 v-model="email"
                 :rules="emailRules"
                 required
@@ -121,7 +121,7 @@ export default {
     valid: true,
     firstName: 'Steven',
     lastName: 'Myers',
-    email: 'larkenx ',
+    email: 'larkenx@gmail.com',
     password: 'ilikecandysomuch',
     confirmPassword: 'ilikecandysomuch'
   }),

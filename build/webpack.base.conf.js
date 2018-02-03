@@ -22,7 +22,10 @@ const createLintingRule = () => ({
 module.exports = {
   context: path.resolve(__dirname, '../'),
   entry: {
-    app: './src/main.js'
+    app: './src/main.js',
+    vendors: [
+      "webpack-material-design-icons"
+    ]
   },
   output: {
     path: config.build.assetsRoot,
