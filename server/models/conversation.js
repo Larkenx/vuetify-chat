@@ -4,10 +4,10 @@ const Schema = mongoose.Schema
 // create a schema
 const conversationSchema = new Schema(
   {
-    particpants: [String],
+    participants: [String],
     messages: [Schema.Types.Object]
   },
-  { collection: 'User' }
+  { collection: 'Conversation' }
 )
 
 module.exports = mongoose.model('Conversation', conversationSchema)

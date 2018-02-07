@@ -4,20 +4,20 @@
       <v-flex></v-flex>
     </v-layout>
     <v-divider></v-divider>
-    <v-container grid-list-xl fluid style="height: 90%" v-if="getMessages().length > 0">
+    <v-container grid-list-xl fluid style="height: 90%; overflow: scroll" v-if="getMessages().length > 0">
         <v-layout
 
           v-for="(message, index) in getMessages()"
           :key="index"
           row
-          :align-start="message.sender === 'you'"
-          :align-end="message.sender !== 'you'"
-          :align-content-start="message.sender === 'you'"
-          :align-content-end="message.sender !== 'you'"
+          :align-start="message.sender === $store.state.user.id"
+          :align-end="message.sender !== $store.state.user.id"
+          :align-content-start="message.sender === $store.state.user.id"
+          :align-content-end="message.sender !== $store.state.user.id"
         >
-            <v-flex xs6 sm4 :offset-xs6="message.sender === 'you'" :offset-sm8="message.sender === 'you'">
-              <v-card class="message" :color="message.sender !== 'you' ? 'white' : 'blue' ">
-                <v-card-text :class="message.sender !== 'you' ? 'black--text' : 'white--text' ">
+            <v-flex xs6 sm4 :offset-xs6="message.sender === $store.state.user.id" :offset-sm8="message.sender === $store.state.user.id">
+              <v-card class="message" :color="message.sender !== $store.state.user.id ? 'white' : 'blue' ">
+                <v-card-text :class="message.sender !== $store.state.user.id ? 'black--text' : 'white--text' ">
                   {{message.text}}
                 </v-card-text>
               </v-card>
@@ -68,9 +68,17 @@ export default {
 
       console.log(`Sending msg: '${this.message}'`)
       if (directMessages[userID]) {
+        socket.emit('sendMessage', {
+          conversation: directMessages[userID],
+          message: { text: this.message, sender: user.id }
+        })
       } else {
         console.log('New conversation started ...')
-        socket.emit('startConversation', { sender: user.id, receiver: userID, message: this.message })
+        socket.emit('startConversation', {
+          sender: user.id,
+          receiver: userID,
+          message: { text: this.message, sender: user.id }
+        })
       }
     }
   }

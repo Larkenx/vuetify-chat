@@ -18,7 +18,8 @@ const userSchema = new Schema(
 
 userSchema.pre('save', function(next) {
   var user = this
-  console.log(user)
+  // console.log(user)
+  // if (this.isNew) {
   bcrypt.hash(user.password, 10, (err, hash) => {
     if (err) {
       console.log('Error during bcrypt hashing - ', err)
@@ -27,6 +28,8 @@ userSchema.pre('save', function(next) {
     user.password = hash
     next()
   })
+  // }
+  // next()
 })
 
 module.exports = mongoose.model('User', userSchema)

@@ -32,10 +32,59 @@ let options = {
   keepAlive: 300000,
   connectTimeoutMS: 30000
 }
-mongoose.connect('mongodb://localhost:27017', options)
+mongoose.connect('mongodb://localhost:27017/chat', options)
 // mongoose.connect(process.env.MONGODB_URI, options)
 
+process.env.CLEAR_USERS = 'false'
+
+const mockRegister = params => {
+  let user = new userSchema({ ...params, contacts: [], conversations: [], sockets: [] })
+  userSchema.findOne({ email: params.email }, (err, dbUser) => {
+    if (err) {
+      console.log(chalk.red(err))
+    }
+    if (dbUser !== null) {
+      // a user with this email already exists!
+      console.log(chalk.red('Error - cannot register email that already exists'))
+    } else {
+      user.save((err, result) => {
+        if (err) {
+          console.log(chalk.red('Error - failed to register user with params : ', params))
+        } else {
+          console.log(chalk.bgBlue.bold('Successfully registered mock user : ', result.email))
+        }
+      })
+    }
+  })
+}
+
+const mockCreateUsers = () => {
+  const users = [
+    {
+      firstName: 'Steven',
+      lastName: 'Myers',
+      email: 'test@example.com',
+      password: 'ilikecandysomuch'
+    },
+    {
+      firstName: 'John',
+      lastName: 'Heveran',
+      email: 'test2@example.com',
+      password: 'ilikecandysomuch'
+    },
+    {
+      firstName: 'David',
+      lastName: 'Short',
+      email: 'test3@example.com',
+      password: 'ilikecandysomuch'
+    }
+  ]
+
+  users.forEach(u => mockRegister(u))
+}
+
 let db = mongoose.connection
+
 db.on('error', err => {
   console.log('Failed to connect to the MongoDB database.', err)
 })
@@ -43,8 +92,12 @@ db.on('error', err => {
 db.once('open', () => {
   console.log('Successfully connected to MongoDB.')
   if (process.env.CLEAR_USERS === 'true') {
-    console.log('Clearing existing users!')
+    console.log('Clearing existing users and conversations!')
     userSchema.collection.drop()
+    conversationSchema.collection.drop()
+    setTimeout(() => {
+      mockCreateUsers()
+    }, 2000)
   }
 })
 
@@ -58,8 +111,10 @@ let io = socketServer(serve)
 serve.listen(process.env.PORT || 5000, () => {
   console.log('Socket Server running on port:' + (process.env.PORT || 5000))
 })
+
 let connections = []
 let loadedUsers = []
+
 io.on('connection', socket => {
   console.log(chalk.green(`Socket ID ${socket.id} has connected.`))
   connections.push(socket.id)
@@ -129,6 +184,13 @@ io.on('connection', socket => {
                     conversations: user.conversations,
                     contacts: user.contacts
                   })
+                  conversationSchema.find({ participants: user._id }, (err, c) => {
+                    if (err) {
+                      console.log(chalk.yellow('Could not find conversations for ', user.email))
+                    } else {
+                      io.to(socket.id).emit('loadAllConversations', c)
+                    }
+                  })
                 }
               })
             } else {
@@ -164,8 +226,8 @@ io.on('connection', socket => {
             io.to(socket.id).emit('registrationError', 'Sorry, you currently cannot register at this time.') // server problem
           } else {
             console.log(chalk.blue('Successfully registered new user : ', result.email))
-            login({ email: params.email, password: params.password })
-            loadUsers({ id: user._id })
+            // login({ email: params.email, password: params.password })
+            // loadUsers({ id: user._id })
           }
         })
       }
@@ -192,7 +254,7 @@ io.on('connection', socket => {
   const startConversation = params => {
     let { sender, receiver, message } = params
     let conversation = new conversationSchema({
-      particpants: [sender, receiver],
+      participants: [sender, receiver],
       messages: [message]
     })
     // save the conversation separately in its own document collection
@@ -202,7 +264,7 @@ io.on('connection', socket => {
         io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
       } else {
         console.log(`Created new conversation between ${sender} and ${receiver}`)
-        io.to(socket.id).emit('loadNewConversation', result)
+        // io.to(socket.id).emit('loadNewConversation', result)
         userSchema.find(
           {
             _id: {
@@ -221,10 +283,10 @@ io.on('connection', socket => {
               // passwords from bcrpyt magically fuck up
               // ---------------- FIX ME ---------------
               // push the newly created conversation onto both participants
-              u1.conversations.push(result.id)
-              u2.conversations.push(result.id)
+              // u1.conversations.push(result.id)
+              // u2.conversations.push(result.id)
               const rollback = id => {
-                findByIdAndUpdate(id, { $pull: { conversations: result.id } }, (err, result) => {
+                userSChema.findByIdAndUpdate(id, { $pull: { conversations: result.id } }, (err, result) => {
                   if (err || result === null) {
                     console.log('Failed to rollback conversation... :(')
                   } else {
@@ -234,35 +296,74 @@ io.on('connection', socket => {
                   }
                 })
               }
-              // save u1. if that works, try to save u2. if it doesn't work, roll back u1.
-              u1.save((err, u1Result) => {
-                if (err) {
-                  console.log(`Failed to save conversation for ${u1.email}`)
-                  io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
-                } else {
-                  // it worked, now we can update u2 too.
-                  u2.save((err, u2Result) => {
-                    if (err) {
-                      console.log(`Failed to save conversation for ${u2.email}. Rolling back changes for ${u1.email}`)
-                      rollback(u1.id)
-                    } else {
-                      console.log(`Successfully added conversation ${result.id} to ${u1.id} and ${u2.id}`)
-                      // now that we've successfully worked out that both users have updated conversations,
-                      // we have to iterate through active sockets and send the updated info to each one the user
-                      // is logged into.
-                      let sockets = u1.sockets.concat(u2.sockets).filter(id => {
-                        return connections.includes(id)
-                      })
 
-                      console.log(chalk.yellow('Sending these sockets updated conversations'), sockets)
+              userSchema.update(
+                { _id: { $in: [u1.id, u2.id] } },
+                { $push: { conversations: result.id } },
+                { multi: true },
+                (err, updatedUsers) => {
+                  console.log(updatedUsers)
+                  if (err) {
+                    console.log(`Failed to save conversation for ${u1.email}`)
+                    io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
+                    // need to roll back stuff
+                    rollback(u1.id)
+                    rollback(u2.id)
+                  } else {
+                    // now that we've successfully worked out that both users have updated conversations,
+                    // we have to iterate through active sockets and send the updated info to each one the user
+                    // is logged into.
+                    let sockets = u1.sockets.concat(u2.sockets).filter(id => {
+                      return connections.includes(id)
+                    })
 
-                      sockets.forEach(s => {
-                        io.to(s).emit('loadNewConversation', result)
-                      })
-                    }
-                  })
+                    console.log(chalk.yellow('Sending these sockets updated conversations'), sockets)
+
+                    sockets.forEach(s => {
+                      io.to(s).emit('loadNewConversation', result)
+                    })
+                  }
                 }
-              })
+              )
+
+              // userSchema.findByIdAndUpdate(u1._id, { $push: { conversations: result.id}}, (err, u1Saved) => {
+              //   if (err) {
+              //     console.log(`Failed to save conversation for ${u1.email}`)
+              //     io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
+              //   } else {
+              //     userSchema.findByIdAndUpdate(u2._id, { $push: { conversa}})
+              //   }
+              // })
+
+              // save u1. if that works, try to save u2. if it doesn't work, roll back u1.
+              // u1.save((err, u1Result) => {
+              //   if (err) {
+              //     console.log(`Failed to save conversation for ${u1.email}`)
+              //     io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
+              //   } else {
+              //     // it worked, now we can update u2 too.
+              //     u2.save((err, u2Result) => {
+              //       if (err) {
+              //         console.log(`Failed to save conversation for ${u2.email}. Rolling back changes for ${u1.email}`)
+              //         rollback(u1.id)
+              //       } else {
+              //         console.log(`Successfully added conversation ${result.id} to ${u1.id} and ${u2.id}`)
+              //         // now that we've successfully worked out that both users have updated conversations,
+              //         // we have to iterate through active sockets and send the updated info to each one the user
+              //         // is logged into.
+              //         let sockets = u1.sockets.concat(u2.sockets).filter(id => {
+              //           return connections.includes(id)
+              //         })
+              //
+              //         console.log(chalk.yellow('Sending these sockets updated conversations'), sockets)
+              //
+              //         sockets.forEach(s => {
+              //           io.to(s).emit('loadNewConversation', result)
+              //         })
+              //       }
+              //     })
+              //   }
+              // })
               // ---------------- FIX ME ---------------
             }
           }
@@ -275,6 +376,7 @@ io.on('connection', socket => {
     // need to get all of the active users in the requesting sockets
     // chat rooms and contact list of the requesting socket
     console.log(params)
+    const allUsers = {}
     userSchema.findById(params.id, (err, user) => {
       if (err || user !== null) {
         console.log(chalk.yellow('Could not find user ID', params.id, ' for collecting loaded users'))
@@ -296,6 +398,7 @@ io.on('connection', socket => {
             if (conversationErr) {
               console.log('Could not retrieve the conversations')
               // emit some error...?
+            } else {
             }
 
             // at this step, we have access to all of the users from the connecting socket
@@ -331,7 +434,37 @@ io.on('connection', socket => {
     users.forEach(u => register(u))
   }
 
-  // mockCreateUsers()
+  const sendMessage = params => {
+    let { conversation, message } = params
+    let { participants } = conversation
+    conversationSchema.findByIdAndUpdate(conversation._id, { $push: { messages: message } }, (err, c) => {
+      if (err || c === null) {
+        console.log(chalk.red('Could not send message!', err, c))
+      } else {
+        console.log(chalk.bgBlue.bold('New message created: ', params.message.text))
+        // properly updated the conversation, now we just need to distribute the new message to *online* clients
+        console.log('Sending message to all participants', participants)
+        participants.forEach(p => {
+          let socketID = loadedUsers.filter(u => {
+            return u.id === p
+          })[0]
+          if (socketID !== null) {
+            console.log(chalk.yellow.bold('Sending message to', socketID))
+            io.to(socketID).emit('newMessage', params)
+          }
+        })
+        // let ids = participants.map(p => {
+        //   return p.toString()
+        // })
+        // loadedUsers.forEach(u => {
+        //   if (ids.includes(u.id)) {
+        //     console.log('Sending new message', message, 'to socket: ', u.socket)
+        //     io.to(u.socket).emit('newMessage', params)
+        //   }
+        // })
+      }
+    })
+  }
 
   /* Socket Server Event Listeners */
   // accepts {email: String, password: String} so that we can check if they're the right users
@@ -358,5 +491,9 @@ io.on('connection', socket => {
 
   socket.on('startConversation', params => {
     startConversation(params)
+  })
+
+  socket.on('sendMessage', params => {
+    sendMessage(params)
   })
 })

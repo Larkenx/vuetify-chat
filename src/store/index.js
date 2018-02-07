@@ -11,6 +11,8 @@ console.log('Connecting to socket server at ' + window.location.hostname + ':' +
 const types = {
   loadUserInformation: 'LOAD_USER_INFORMATION',
   loadNewConversation: 'LOAD_NEW_CONVERSATION',
+  loadAllConversations: 'LOAD_ALL_CONVERSATIONS',
+  loadNewMessage: 'LOAD_NEW_MESSAGE',
   loadUsers: 'LOAD_USERS',
   loadError: 'LOAD_ERROR',
   clearError: 'CLEAR_ERROR',
@@ -48,6 +50,12 @@ let store = new Vuex.Store({
     loadNewConversation({ commit }, conversation) {
       commit(types.loadNewConversation, conversation)
     },
+    loadAllConversations({ commit }, conversations) {
+      commit(types.loadAllConversations, conversations)
+    },
+    loadNewMessage({ commit }, params) {
+      commit(types.loadNewMessage, params)
+    },
     loadUsers({ commit }, users) {
       commit(types.loadUsers, users)
     },
@@ -74,16 +82,45 @@ let store = new Vuex.Store({
     [types.loadNewConversation](state, conversation) {
       state.conversations.push(conversation)
       state.user.conversations.push(conversation._id)
-      if (conversation.particpants.length === 2) {
+      if (conversation.participants.length === 2) {
         let p = conversation.participants.filter(u => {
           return u !== state.user.id
         })
         if (p.length === 1) {
-          state.directMessages[p[0].id] = conversation
+          state.directMessages[p[0]] = conversation
+        }
+      }
+    },
+    [types.loadAllConversations](state, conversations) {
+      state.conversations = conversations
+      conversations.forEach(c => {
+        if (c.participants.length === 2) {
+          let p = c.participants.filter(u => {
+            return u !== state.user.id
+          })
+          if (p.length === 1) {
+            state.directMessages[p[0]] = c
+          }
+        }
+      })
+    },
+    [types.loadNewMessage](state, params) {
+      let { conversation, message } = params
+      let conversationToUpdate = state.conversations.filter(c => {
+        return c._id === conversation._id
+      })
+      if (conversationToUpdate.length !== 1) {
+        console.log("Uh oh. Received message for a conversation we don't have")
+      } else {
+        console.log('Added new message to a conversation: ', message.text)
+        conversationToUpdate[0].messages.push(message)
+        if (conversation._id in directMessages) {
+          directMessages[conversation._id].messages.push(message)
         }
       }
     },
     [types.loadUsers](state, users) {
+      console.log('Updated list of logged in users:', users)
       state.loadedUsers = users
     },
     [types.clearError](state, type) {
@@ -108,10 +145,15 @@ socket.on('loginSuccessful', userData => {
 })
 
 socket.on('loadNewConversation', conversation => {
+  console.log('Client received a new conversation!', conversation)
   store.dispatch('loadNewConversation', conversation)
   // router.push(`/chat/${conversation.id}`)
 })
-
+socket.on('loadAllConversations', conversations => {
+  console.log('Client received all conversations!', conversations)
+  store.dispatch('loadAllConversations', conversations)
+  // router.push(`/chat/${conversation.id}`)
+})
 socket.on('loadUsers', users => {
   store.dispatch('loadUsers', users)
 })
@@ -128,6 +170,10 @@ socket.on('registrationError', err => {
 
 socket.on('loginError', err => {
   store.dispatch('loadError', { error: err, type: 'login' })
+})
+
+socket.on('newMessage', params => {
+  store.dispatch('loadNewMessage', params)
 })
 
 export default store
