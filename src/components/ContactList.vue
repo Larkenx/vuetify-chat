@@ -1,6 +1,6 @@
 <template>
   <v-list subheader dense class="pt-0">
-    <v-list-tile avatar v-for="person in contacts" :key="person.title" :to="`/chat/${person.id}`">
+    <v-list-tile avatar v-for="person in contacts" :key="person.title" :to="`/chat/${person._id}`">
       <v-list-tile-avatar>
         <img :src="person.avatar">
       </v-list-tile-avatar>

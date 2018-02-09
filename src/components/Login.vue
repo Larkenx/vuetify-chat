@@ -24,6 +24,7 @@
                   <v-layout align-center wrap>
                     <v-flex sm12>
                       <v-text-field
+                        @keyup.enter="submit()"
                         prepend-icon="lock"
                         label="Password"
                         v-model="password"
@@ -46,6 +47,7 @@
                 <v-spacer></v-spacer>
                 <v-btn
                   raised
+                  :loading="loading && valid"
                   class="white--text"
                   color="blue"
                   @click="submit"
@@ -66,13 +68,15 @@
 export default {
   data: () => ({
     valid: true,
-    email: 'test@example.com',
-    password: 'ilikecandysomuch'
+    email: '',
+    password: '',
+    loading: false
   }),
   methods: {
     submit() {
       console.log('Logging in...')
       this.clearLoginError()
+      this.loading = true
       this.$store.state.socket.emit('login', {
         email: this.email,
         password: this.password

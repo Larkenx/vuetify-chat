@@ -1,5 +1,5 @@
 <template>
-  <v-app dark>
+  <v-app :dark="darkTheme">
       <v-navigation-drawer permanent app fixed clipped :mini-variant.sync="mini" v-model="drawer" v-if="loggedIn()">
         <v-list expand>
           <!-- NEWS -->
@@ -10,20 +10,22 @@
             <v-list-tile-content>
                 <v-btn flat color="blue" exact to="/">View News Feed</v-btn>
             </v-list-tile-content>
+            <v-spacer></v-spacer>
             <v-list-tile-action>
                 <v-btn icon @click.native.stop="mini = !mini">
-                    <v-icon>chevron_left</v-icon>
+                    <v-icon v-if="!mini">chevron_left</v-icon>
+                    <v-icon v-else>chevron_right</v-icon>
                 </v-btn>
             </v-list-tile-action>
           </v-list-tile>
           <!-- Chat Rooms  -->
-          <v-list-group class="pa-0" prepend-icon="forum">
+          <!-- <v-list-group class="pa-0" prepend-icon="forum">
             <v-list-tile slot="activator">
               <v-list-tile-content>
                 <v-list-tile-title>Chat Rooms</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
-          </v-list-group>
+          </v-list-group> -->
           <!-- Online people  -->
           <online-users></online-users>
           <!-- Recent Conversations -->
@@ -33,7 +35,7 @@
                 <v-list-tile-title>Direct Messages</v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
-            <v-list-tile avatar v-for="person in contacts" :key="person.title" :to="`/chat/${person.id}`">
+            <v-list-tile avatar v-for="person in contacts" :key="person.title" :to="`/chat/${person._id}`">
               <v-list-tile-avatar>
                 <img :src="person.avatar">
               </v-list-tile-avatar>
@@ -46,9 +48,12 @@
       </v-navigation-drawer>
       <!--  Top Toolbar -->
       <v-toolbar app fixed :clipped-left="true">
-          <v-toolbar-title>Vue Chat</v-toolbar-title>
+          <v-toolbar-title>Vuetify Chat</v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-toolbar-items v-if="this.$store.state.user.id === null">
+          <v-toolbar-items>
+            <v-btn class="pa-2" flat @click="darkTheme = !darkTheme"><v-icon>invert_colors</v-icon></v-btn>
+          </v-toolbar-items>
+          <v-toolbar-items v-if="this.$store.state.user._id === null">
             <v-btn flat color="green" exact to="/register">Register</v-btn>
             <v-btn flat color="blue" exact to="/login">Sign In</v-btn>
           </v-toolbar-items>
@@ -82,6 +87,7 @@ export default {
     return {
       drawer: true,
       mini: true,
+      darkTheme: true
     }
   },
   methods: {
@@ -94,8 +100,9 @@ export default {
       this.$store.dispatch('logout')
     },
     loggedIn() {
-      return this.$store.state.user.id !== null
+      return this.$store.state.user._id !== null
     }
   },
   name: 'App'
-}</script>
+}
+</script>

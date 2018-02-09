@@ -35,8 +35,6 @@ let options = {
 mongoose.connect('mongodb://localhost:27017/chat', options)
 // mongoose.connect(process.env.MONGODB_URI, options)
 
-process.env.CLEAR_USERS = 'false'
-
 const mockRegister = params => {
   let user = new userSchema({ ...params, contacts: [], conversations: [], sockets: [] })
   userSchema.findOne({ email: params.email }, (err, dbUser) => {
@@ -63,20 +61,20 @@ const mockCreateUsers = () => {
     {
       firstName: 'Steven',
       lastName: 'Myers',
-      email: 'test@example.com',
-      password: 'ilikecandysomuch'
+      email: '1',
+      password: '123456789'
     },
     {
       firstName: 'John',
       lastName: 'Heveran',
-      email: 'test2@example.com',
-      password: 'ilikecandysomuch'
+      email: '2',
+      password: '123456789'
     },
     {
       firstName: 'David',
       lastName: 'Short',
-      email: 'test3@example.com',
-      password: 'ilikecandysomuch'
+      email: '3',
+      password: '123456789'
     }
   ]
 
@@ -88,6 +86,8 @@ let db = mongoose.connection
 db.on('error', err => {
   console.log('Failed to connect to the MongoDB database.', err)
 })
+
+process.env.CLEAR_USERS = 'true'
 
 db.once('open', () => {
   console.log('Successfully connected to MongoDB.')
@@ -113,7 +113,16 @@ serve.listen(process.env.PORT || 5000, () => {
 })
 
 let connections = []
-let loadedUsers = []
+let loadedUsers = {}
+
+const removeLoadedUser = socketID => {
+  let userIDS = Object.keys(loadedUsers)
+  for (let u of userIDS) {
+    if (loadedUsers[u].socket === socketID) {
+      delete loadedUsers[u]
+    }
+  }
+}
 
 io.on('connection', socket => {
   console.log(chalk.green(`Socket ID ${socket.id} has connected.`))
@@ -121,13 +130,10 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     console.log(chalk.yellow(`Socket ID ${socket.id} has disconnected.`))
-    let i = connections.indexOf(socket.id)
-    if (i > -1) {
-      connections.splice(i, 1)
-    }
-    loadedUsers = loadedUsers.filter(u => {
-      return u.socket !== socket.id
+    connections = connections.filter(s => {
+      return socket.id !== s
     })
+    removeLoadedUser(socket.id)
     io.emit('loadUsers', loadedUsers)
   })
 
@@ -174,10 +180,10 @@ io.on('connection', socket => {
                   // console.log('Successfully pushed socket ', socket.id, ' to user ', user.email)
                   console.log(chalk.green(`${user.email} has logged in.`))
                   let { firstName, lastName, _id } = user
-                  loadedUsers.push({ firstName, lastName, id: _id, socket: socket.id })
+                  loadedUsers[_id.toString()] = { firstName, lastName, _id, socket: socket.id }
                   io.emit('loadUsers', loadedUsers)
                   io.to(socket.id).emit('loginSuccessful', {
-                    id: user._id,
+                    _id: user._id,
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
@@ -226,8 +232,7 @@ io.on('connection', socket => {
             io.to(socket.id).emit('registrationError', 'Sorry, you currently cannot register at this time.') // server problem
           } else {
             console.log(chalk.blue('Successfully registered new user : ', result.email))
-            // login({ email: params.email, password: params.password })
-            // loadUsers({ id: user._id })
+            login({ email: params.email, password: params.password })
           }
         })
       }
@@ -286,20 +291,20 @@ io.on('connection', socket => {
               // u1.conversations.push(result.id)
               // u2.conversations.push(result.id)
               const rollback = id => {
-                userSChema.findByIdAndUpdate(id, { $pull: { conversations: result.id } }, (err, result) => {
-                  if (err || result === null) {
+                userSChema.findByIdAndUpdate(id, { $pull: { conversations: result._id } }, (err, res2) => {
+                  if (err || res2 === null) {
                     console.log('Failed to rollback conversation... :(')
                   } else {
                     console.log(
-                      `Rollback succeeded. Conversation ${result.id} removed from ${result.email}'s conversations.`
+                      `Rollback succeeded. Conversation ${result._id} removed from ${res2.email}'s conversations.`
                     )
                   }
                 })
               }
 
               userSchema.update(
-                { _id: { $in: [u1.id, u2.id] } },
-                { $push: { conversations: result.id } },
+                { _id: { $in: [u1._id, u2._id] } },
+                { $push: { conversations: result._id } },
                 { multi: true },
                 (err, updatedUsers) => {
                   console.log(updatedUsers)
@@ -307,8 +312,8 @@ io.on('connection', socket => {
                     console.log(`Failed to save conversation for ${u1.email}`)
                     io.to(socket.id).emit('conversationError', "Sorry, we can't connect you right now.")
                     // need to roll back stuff
-                    rollback(u1.id)
-                    rollback(u2.id)
+                    rollback(u1._id)
+                    rollback(u2._id)
                   } else {
                     // now that we've successfully worked out that both users have updated conversations,
                     // we have to iterate through active sockets and send the updated info to each one the user
@@ -377,9 +382,9 @@ io.on('connection', socket => {
     // chat rooms and contact list of the requesting socket
     console.log(params)
     const allUsers = {}
-    userSchema.findById(params.id, (err, user) => {
+    userSchema.findById(params._id, (err, user) => {
       if (err || user !== null) {
-        console.log(chalk.yellow('Could not find user ID', params.id, ' for collecting loaded users'))
+        console.log(chalk.yellow('Could not find user ID', params._id, ' for collecting loaded users'))
         // emit some error to the Client
       } else {
         const { contacts, conversations } = user // eventually add the users' chatrooms here too!
@@ -409,31 +414,6 @@ io.on('connection', socket => {
     })
   }
 
-  const mockCreateUsers = () => {
-    const users = [
-      {
-        firstName: 'Steven',
-        lastName: 'Myers',
-        email: 'test@example.com',
-        password: 'ilikecandysomuch'
-      },
-      {
-        firstName: 'John',
-        lastName: 'Heveran',
-        email: 'test2@example.com',
-        password: 'ilikecandysomuch'
-      },
-      {
-        firstName: 'David',
-        lastName: 'Short',
-        email: 'test3@example.com',
-        password: 'ilikecandysomuch'
-      }
-    ]
-
-    users.forEach(u => register(u))
-  }
-
   const sendMessage = params => {
     let { conversation, message } = params
     let { participants } = conversation
@@ -445,23 +425,10 @@ io.on('connection', socket => {
         // properly updated the conversation, now we just need to distribute the new message to *online* clients
         console.log('Sending message to all participants', participants)
         participants.forEach(p => {
-          let socketID = loadedUsers.filter(u => {
-            return u.id === p
-          })[0]
-          if (socketID !== null) {
-            console.log(chalk.yellow.bold('Sending message to', socketID))
-            io.to(socketID).emit('newMessage', params)
+          if (p in loadedUsers) {
+            io.to(loadedUsers[p].socket).emit('newMessage', params)
           }
         })
-        // let ids = participants.map(p => {
-        //   return p.toString()
-        // })
-        // loadedUsers.forEach(u => {
-        //   if (ids.includes(u.id)) {
-        //     console.log('Sending new message', message, 'to socket: ', u.socket)
-        //     io.to(u.socket).emit('newMessage', params)
-        //   }
-        // })
       }
     })
   }
@@ -473,11 +440,8 @@ io.on('connection', socket => {
   })
 
   socket.on('logout', params => {
-    loadedUsers = loadedUsers.filter(u => {
-      return u.id !== params.id || u.id !== params.socket
-    })
+    removeLoadedUser(params._id)
     console.log(chalk.yellow(`${params.email} has logged out.`))
-    // loadUsers(params)
     io.emit('loadUsers', loadedUsers)
   })
   // accepts {email: String, password: String, firstName: String, lastName: String} to create a new user
