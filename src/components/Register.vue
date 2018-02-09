@@ -1,5 +1,5 @@
 <template>
-  <v-container fill-height fluid v-if="this.$store.state.user.id === null">
+  <v-container fill-height fluid v-if="this.$store.state.user._id === null">
     <v-card style="margin: auto; width: 700px">
       <v-toolbar flat color="green white--text">
         <v-toolbar-title>Create an Account</v-toolbar-title>
@@ -30,7 +30,7 @@
           <v-layout>
             <v-flex xs6>
               <v-text-field
-                label="email"
+                label="Email Address"
                 v-model="email"
                 :rules="emailRules"
                 required
@@ -71,6 +71,7 @@
                 :rules="validatePasswords()"
                 type="password"
                 required
+                @keyup.enter="submit"
               ></v-text-field>
             </v-flex>
           </v-layout>
@@ -79,12 +80,13 @@
             <v-btn
               class="white--text"
               color="green"
+              :loading="loading"
               @click="submit"
               :disabled="!valid"
             >
               Create Account
             </v-btn>
-            <v-btn @click="clear">clear</v-btn>
+            <v-btn@click="clear">clear</v-btn>
           </v-layout>
         </v-container>
       </v-form>
@@ -110,7 +112,10 @@
 <script>
 export default {
   data: () => ({
-    passwordRules: [p => !!p || 'Password is required.', p => !(p.length <= 8) || 'Password must be longer than 8 characters.'],
+    passwordRules: [
+      p => !!p || 'Password is required.',
+      p => !(p.length <= 8) || 'Password must be longer than 8 characters.'
+    ],
     emailRules: [
       value => {
         const pattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -119,19 +124,26 @@ export default {
       v => !!v || ' email is required.'
     ],
     valid: true,
-    firstName: 'Steven',
-    lastName: 'Myers',
-    email: 'larkenx ',
-    password: 'ilikecandysomuch',
-    confirmPassword: 'ilikecandysomuch'
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    loading: false
   }),
   methods: {
     validatePasswords() {
       return [p => p === this.password || 'Passwords must match.']
     },
+    afterUpdate() {
+      if (this.loading === true && (!this.$refs.form.validate() || this.emailTaken())) {
+        this.loading = false
+      }
+    },
     submit() {
       if (this.$refs.form.validate()) {
         console.log('Submitting form...')
+        this.loading = true
         this.$store.state.socket.emit('hello', 1)
         this.$store.state.socket.emit('register', {
           firstName: this.firstName.trim(),
