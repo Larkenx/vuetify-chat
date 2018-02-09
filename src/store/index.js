@@ -123,11 +123,14 @@ let store = new Vuex.Store({
           console.log("Uh oh. Received message for a conversation we don't have")
         } else {
           console.log('Added new message to a conversation: ', message.text)
-          conversationToUpdate[0].messages.push(message)
-          if (conversation._id in state.directMessages) {
+          // conversationToUpdate[0].messages.push(message)
+          if (message.sender in state.directMessages) {
             state.directMessages[message.sender].messages.push(message)
-            // Vue.set(state.directMessages[message.sender], p[0], { ...conversation, notifications: conversation.messages.length })
-            state.directMessages[message.sender].notifications++
+            Vue.set(
+              state.directMessages[message.sender],
+              'notifications',
+              state.directMessages[message.sender].notifications + 1
+            )
           }
         }
       }
@@ -142,9 +145,9 @@ let store = new Vuex.Store({
       } else {
         console.log('Added new message to a conversation: ', message.text)
         conversationToUpdate[0].messages.push(message)
-        if (message.receiver in state.directMessages) {
-          state.directMessages[message.receiver].messages.push(message)
-        }
+        // if (message.receiver in state.directMessages) {
+        //   state.directMessages[message.receiver].messages.push(message)
+        // }
       }
     },
     [types.loadUsers](state, users) {
@@ -152,7 +155,7 @@ let store = new Vuex.Store({
       state.loadedUsers = users
     },
     [types.clearNotifications](state, userID) {
-      state.directMessages[userID].notifications = 0
+      Vue.set(state.directMessages[userID], 'notifications', 0)
     },
     [types.clearError](state, type) {
       if (type === 'registration') {

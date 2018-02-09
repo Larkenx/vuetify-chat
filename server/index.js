@@ -32,8 +32,8 @@ let options = {
   keepAlive: 300000,
   connectTimeoutMS: 30000
 }
-mongoose.connect('mongodb://localhost:27017/chat', options)
-// mongoose.connect(process.env.MONGODB_URI, options)
+// mongoose.connect('mongodb://localhost:27017/chat', options)
+mongoose.connect(process.env.MONGODB_URI, options)
 
 const mockRegister = params => {
   let user = new userSchema({ ...params, contacts: [], conversations: [], sockets: [] })
@@ -87,7 +87,7 @@ db.on('error', err => {
   console.log('Failed to connect to the MongoDB database.', err)
 })
 
-process.env.CLEAR_USERS = 'true'
+process.env.CLEAR_USERS = 'false'
 
 db.once('open', () => {
   console.log('Successfully connected to MongoDB.')
@@ -95,9 +95,9 @@ db.once('open', () => {
     console.log('Clearing existing users and conversations!')
     userSchema.collection.drop()
     conversationSchema.collection.drop()
-    setTimeout(() => {
-      mockCreateUsers()
-    }, 2000)
+    // setTimeout(() => {
+    //   mockCreateUsers()
+    // }, 2000)
   }
 })
 

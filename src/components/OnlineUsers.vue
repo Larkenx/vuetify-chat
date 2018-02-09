@@ -38,6 +38,9 @@ export default {
       })
     },
     getNotifications(id) {
+      if (this.$route.path.includes(id)) {
+        return 0
+      }
       return id in this.$store.state.directMessages ? this.$store.state.directMessages[id].notifications : 0
     }
   },

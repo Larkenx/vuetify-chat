@@ -45,6 +45,12 @@
 <script>
 export default {
   props: ['userID'],
+  created() {
+    let { userID } = this.$route.params
+    if (userID in this.$store.state.directMessages) {
+      this.$store.dispatch('clearNotifications', userID)
+    }
+  },
   data() {
     return {
       messageInputHeight: '48px',
