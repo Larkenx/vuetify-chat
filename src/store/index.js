@@ -5,7 +5,7 @@ import router from '../router'
 
 Vue.use(Vuex)
 const port = process.env.PORT || 5000
-const socket = io.connect(window.location.hostname + ':' + port) // connect to the express server
+const socket = io.connect(window.location.hostname + ':' + window.location.port) // connect to the express server
 console.log('Connecting to socket server at ' + window.location.hostname + ':' + window.location.port)
 
 const types = {
